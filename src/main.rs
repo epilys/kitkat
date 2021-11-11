@@ -221,7 +221,7 @@ fn create_tail_pixmap(t: f32) -> Vec<u8> {
     let mut angle: f32;
 
     //    static XPoint tailOffset = { 74, -15 };
-    const TAIL_OFFSET: (i32, i32) = (74, -15);
+    const TAIL_OFFSET: (i32, i32) = (72, -5);
 
     let mut off_center_tail: Vec<(i32, i32)> = vec![(0, 0); N_TAIL_PTS]; /* off center tail    */
     let mut new_tail: Vec<(i32, i32)> = vec![(0, 0); N_TAIL_PTS]; /*  Tail at time "t"  */
@@ -267,10 +267,19 @@ fn create_tail_pixmap(t: f32) -> Vec<u8> {
         new_tail[i].1 += TAIL_OFFSET.1;
     }
 
+    const WIDTH: f64 = 10.0;
+    const WIDTH2: f64 = WIDTH / 2.0;
     for window in new_tail.as_slice().windows(2) {
         let point_a = window[0];
         let point_b = window[1];
-        plot_line_width(&mut ret, point_a, point_b, 25.0);
+        for w in ((-1.0 * WIDTH2) as i32)..(WIDTH2 as i32) {
+            plot_line_width(
+                &mut ret,
+                (point_a.0 + w, point_a.1 + w),
+                (point_b.0 + w, point_b.1 + w),
+                1.0,
+            );
+        }
     }
 
     ret
