@@ -107,7 +107,7 @@ const TAIL: Bitmap<'static> = Bitmap {
     y_offset: TAIL_OFFSET_Y,
 };
 
-const NUM_TAILS: usize = 16;
+const NUM_TAILS: usize = 10;
 
 const N_TAIL_PTS: usize = 7;
 const CENTER_TAIL: [(i32, i32); N_TAIL_PTS] = [
@@ -175,10 +175,10 @@ fn plot_line_width(
         x2 = x0;
         if 2 * e2 >= -dx {
             /* x step */
-            eprintln!(" x step ");
+            //eprintln!(" x step ");
             e2 += dy;
             y2 = y0;
-            while e2 < ((ed as f32 * wd) as i32) && (y1 <= y2 || dx > dy) {
+            while e2 < ((ed as f32 * wd) as i32) && (y1 != y2 || dx > dy) {
                 y2 += sy;
                 plot(buffer, x0, y2);
                 points.push((x0, y2));
@@ -193,7 +193,7 @@ fn plot_line_width(
         }
         if 2 * e2 <= dy {
             /* y step */
-            eprintln!(" y step ");
+            //eprintln!(" y step ");
             e2 = dx - e2;
             while e2 < ((ed as f32 * wd) as i32) && (x1 != x2 || dx < dy) {
                 x2 += sx;
@@ -211,6 +211,57 @@ fn plot_line_width(
     }
 }
 
+fn plot_ellipse(
+    buffer: &mut Vec<u8>,
+    (xm, ym): (i32, i32),
+    (a, b): (i32, i32),
+    quadrants: [bool; 4],
+    wd: f32,
+) {
+    let mut x = -a;
+    let mut y = 0;
+    let mut e2 = b;
+    let mut dx = (1 + 2 * x) * e2 * e2;
+    let mut dy = x * x;
+    let mut err = dx + dy;
+    loop {
+        if quadrants[0] {
+            plot(buffer, xm - x, ym + y); /*   I. Quadrant */
+        }
+        if quadrants[1] {
+            plot(buffer, xm + x, ym + y); /*  II. Quadrant */
+        }
+        if quadrants[2] {
+            plot(buffer, xm + x, ym - y); /* III. Quadrant */
+        }
+        if quadrants[3] {
+            plot(buffer, xm - x, ym - y); /*  IV. Quadrant */
+        }
+        e2 = 2 * err;
+        if e2 >= dx {
+            x += 1;
+            dx += 2 * b * b;
+            err += dx;
+            //err += dx += 2*(long)b*b; }    /* x step */
+        }
+        if e2 <= dy {
+            y += 1;
+            dy += 2 * a * a;
+            err += dy;
+            //err += dy += 2*(long)a*a; }    /* y step */
+        }
+        if x > 0 {
+            break;
+        }
+    }
+    while y < b {
+        /* to early stop for flat ellipses with a=1, */
+        y += 1;
+        plot(buffer, xm, ym + y); /* -> finish tip of ellipse */
+        plot(buffer, xm, ym - y);
+    }
+}
+
 fn create_tail_pixmap(t: f32) -> Vec<u8> {
     /*  Pendulum parameters */
     let mut sin_theta: f32;
@@ -221,7 +272,7 @@ fn create_tail_pixmap(t: f32) -> Vec<u8> {
     let mut angle: f32;
 
     //    static XPoint tailOffset = { 74, -15 };
-    const TAIL_OFFSET: (i32, i32) = (72, -5);
+    const TAIL_OFFSET: (i32, i32) = (72, 0);
 
     let mut off_center_tail: Vec<(i32, i32)> = vec![(0, 0); N_TAIL_PTS]; /* off center tail    */
     let mut new_tail: Vec<(i32, i32)> = vec![(0, 0); N_TAIL_PTS]; /*  Tail at time "t"  */
@@ -267,116 +318,35 @@ fn create_tail_pixmap(t: f32) -> Vec<u8> {
         new_tail[i].1 += TAIL_OFFSET.1;
     }
 
-    const WIDTH: f64 = 10.0;
+    const WIDTH: f64 = 15.0;
     const WIDTH2: f64 = WIDTH / 2.0;
     for window in new_tail.as_slice().windows(2) {
         let point_a = window[0];
         let point_b = window[1];
+        plot_line_width(&mut ret, point_a, point_b, 1.0);
         for w in ((-1.0 * WIDTH2) as i32)..(WIDTH2 as i32) {
             plot_line_width(
                 &mut ret,
-                (point_a.0 + w, point_a.1 + w),
-                (point_b.0 + w, point_b.1 + w),
+                (point_a.0 + w, point_a.1),
+                (point_b.0 + w, point_b.1),
                 1.0,
             );
         }
     }
 
+    let mut last_point = *new_tail.last().unwrap();
+    last_point.1 += 1;
+    for b in 0..=((0.8 * WIDTH2) as i32) {
+        plot_ellipse(
+            &mut ret,
+            last_point,
+            (WIDTH2 as i32, b),
+            [false, false, true, true],
+            1.0,
+        );
+    }
+
     ret
-}
-
-fn right_turn(points: &[(i32, i32)]) -> bool {
-    //Again, determining whether three points constitute a "left turn" or a "right turn" does not
-    //require computing the actual angle between the two line segments, and can actually be
-    //achieved with simple arithmetic only.
-    //
-    //For three points P 1 = ( x 1 , y 1 ) {\displaystyle P_{1}=(x_{1},y_{1})} P_{1}=(x_{1},y_{1}),
-    //P 2 = ( x 2 , y 2 ) {\displaystyle P_{2}=(x_{2},y_{2})} P_{2}=(x_{2},y_{2}) and P 3 = ( x 3 ,
-    //y 3 ) {\displaystyle P_{3}=(x_{3},y_{3})} P_{3}=(x_{3},y_{3}), compute the z-coordinate of
-    //the cross product of the two vectors P 1 P 2 → {\displaystyle {\overrightarrow {P_{1}P_{2}}}}
-    //\overrightarrow {P_{1}P_{2}} and P 1 P 3 → {\displaystyle {\overrightarrow {P_{1}P_{3}}}}
-    //\overrightarrow {P_{1}P_{3}}, which is given by the expression ( x 2 − x 1 ) ( y 3 − y 1 ) −
-    //( y 2 − y 1 ) ( x 3 − x 1 ) {\displaystyle
-    //(x_{2}-x_{1})(y_{3}-y_{1})-(y_{2}-y_{1})(x_{3}-x_{1})}
-    //(x_{2}-x_{1})(y_{3}-y_{1})-(y_{2}-y_{1})(x_{3}-x_{1}).
-    //
-    //If the result is 0, the points are collinear; if it is positive, the three points constitute
-    //a "left turn" or counter-clockwise orientation, otherwise a "right turn" or clockwise
-    //orientation (for counter-clockwise numbered points).
-    let p_1 = &points[points.len() - 1];
-    let p_2 = &points[points.len() - 2];
-    let p_3 = &points[points.len() - 3];
-    let z_coordinate = (p_2.0 - p_1.0) * (p_3.1 - p_1.1) - (p_2.1 - p_1.1) * (p_3.0 - p_1.0);
-    z_coordinate < 0
-}
-
-fn convex_hull(points: &[(i32, i32)]) -> Vec<(i32, i32)> {
-    let mut pts = points.to_vec();
-    pts.sort();
-
-    let mut _L_ano = vec![pts[0], pts[1]];
-    for i in 3..pts.len() {
-        _L_ano.push(pts[i]);
-        while _L_ano.len() > 2 && !right_turn(&_L_ano) {
-            let middle_of_last_three = _L_ano.len() - 2;
-            _L_ano.remove(middle_of_last_three);
-        }
-    }
-    let mut _L_kato = vec![pts[pts.len() - 1], pts[pts.len() - 2]];
-    for i in (pts.len() - 2)..1 {
-        _L_kato.push(pts[i]);
-        while _L_kato.len() > 2 && !right_turn(&_L_kato) {
-            let middle_of_last_three = _L_kato.len() - 2;
-            _L_kato.remove(middle_of_last_three);
-        }
-    }
-    // Remove first and last vertex of _L_kato to avoid duplication of common vertices
-    _L_kato.remove(0);
-    _L_kato.pop();
-    _L_ano.extend(_L_kato.into_iter());
-    _L_ano
-}
-type Point = (i32, i32);
-
-fn fill_polygon(buffer: &mut Vec<u8>, points: &[(i32, i32)]) {
-    let mut y_min = points[0].1;
-    let mut y_max = y_min;
-    for (_, y) in points {
-        if *y < y_min {
-            y_min = *y;
-        }
-        if *y > y_max {
-            y_max = *y;
-        }
-    }
-
-    let mut pts = convex_hull(points);
-    struct EdgeInfo {
-        ab: (Point, Point),
-        y_max: i32,
-        x_max: i32,
-        y_min: i32,
-        x_min: i32,
-        slope: f32,
-    }
-    let mut edge_info = vec![];
-    for window in pts.as_slice().windows(2) {
-        let ((x_a, y_a), (x_b, y_b)) = (window[0], window[1]);
-        let slope = (y_a - y_b) as f32 / ((x_a - x_b) as f32);
-        edge_info.push(EdgeInfo {
-            ab: ((x_a, y_a), (x_b, y_b)),
-            y_max: std::cmp::max(y_a, y_b),
-            x_max: std::cmp::max(x_a, x_b),
-            y_min: std::cmp::min(y_a, y_b),
-            x_min: std::cmp::min(x_a, x_b),
-            slope,
-        });
-    }
-
-    for y in y_min..=y_max {
-        for point in points {}
-        //plot(buffer, x0, y0);
-    }
 }
 
 fn create_eye_pixmap(t: f32) -> Vec<u8> {
