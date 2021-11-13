@@ -94,8 +94,8 @@ const EYES: Bitmap<'static> = Bitmap {
     bits: EYES_BITS,
     width: EYES_WIDTH,
     height: EYES_HEIGHT,
-    x_offset: 15,
-    y_offset: 0,
+    x_offset: 5,
+    y_offset: 56,
 };
 
 include!("tail.rs");
