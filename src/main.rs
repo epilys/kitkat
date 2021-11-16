@@ -1,28 +1,43 @@
-#![allow(unused_variables)]
-#![allow(dead_code)]
-#![allow(non_snake_case)]
-#![allow(unused_variables)]
-#![allow(unused_mut)]
-#![allow(unused_imports)]
-extern crate minifb;
+/*
+ * kitkat
+ *
+ * Copyright 2021 - Manos Pitsidianakis
+ *
+ * This file is part of kitkat.
+ *
+ * kitkat is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * kitkat is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with kitkat. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 use minifb::{Key, Window, WindowOptions};
 use std::f64;
 use std::f64::consts::{FRAC_PI_2, PI};
+use std::time::{Duration, Instant, SystemTime};
 
-macro_rules! tr {
-    ($cond:expr ,? $then:expr ,: $else:expr) => {
-        if $cond {
-            $then
-        } else {
-            $else
-        }
-    };
-}
+mod image;
+pub use image::*;
+mod draw;
+pub use draw::*;
+mod hands;
 
-fn from_u8_rgb(r: u8, g: u8, b: u8) -> u32 {
+pub const fn from_u8_rgb(r: u8, g: u8, b: u8) -> u32 {
     let (r, g, b) = (r as u32, g as u32, b as u32);
     (r << 16) | (g << 8) | b
 }
+pub(crate) const AZURE_BLUE: u32 = from_u8_rgb(0, 127, 255);
+pub(crate) const RED: u32 = from_u8_rgb(157, 37, 10);
+pub(crate) const WHITE: u32 = from_u8_rgb(255, 255, 255);
+pub(crate) const BLACK: u32 = 0;
 
 #[derive(Clone, Copy)]
 struct Bitmap<'bits> {
@@ -33,10 +48,35 @@ struct Bitmap<'bits> {
     y_offset: usize,
 }
 
+#[inline(always)]
+pub fn pixel_width_to_bits_width(i: usize) -> usize {
+    i.wrapping_div(8) + if i.wrapping_rem(8) > 0 { 1 } else { 0 }
+}
+
+pub fn bits_to_bytes(bits: &[u8], width: usize) -> Vec<u32> {
+    let mut ret = Vec::with_capacity(bits.len() * 8);
+    let mut current_row_count = 0;
+    for byte in bits {
+        for n in 0..8 {
+            if byte.rotate_right(n) & 0x01 > 0 {
+                ret.push(BLACK);
+            } else {
+                ret.push(WHITE);
+            }
+            current_row_count += 1;
+            if current_row_count == width {
+                current_row_count = 0;
+                break;
+            }
+        }
+    }
+    ret
+}
+
 impl<'bits> Bitmap<'bits> {
+    /*
     fn draw(&self, buffer: &mut Vec<u32>, fg: u32, bg: Option<u32>) {
-        let row_width =
-            self.width.wrapping_div(8) + if self.width.wrapping_rem(8) > 0 { 1 } else { 0 };
+        let row_width = pixel_width_to_bits_width(self.width);
         //std::dbg!(row_width);
         debug_assert_eq!(row_width * self.height, self.bits.len());
         let mut bits = self.bits.iter();
@@ -56,10 +96,11 @@ impl<'bits> Bitmap<'bits> {
                     c += 1;
                 }
             }
-            i += CAT_WIDTH;
+            i += self.width + self.x_offset;
         }
         //debug_assert_eq!(i, self.width * self.height);
     }
+    */
 }
 
 include!("catback.rs");
@@ -94,8 +135,8 @@ const EYES: Bitmap<'static> = Bitmap {
     bits: EYES_BITS,
     width: EYES_WIDTH,
     height: EYES_HEIGHT,
-    x_offset: 5,
-    y_offset: 56,
+    x_offset: 0,
+    y_offset: 0,
 };
 
 include!("tail.rs");
@@ -121,175 +162,10 @@ const CENTER_TAIL: [(i32, i32); N_TAIL_PTS] = [
     (21, 70),
 ];
 
-struct Buffer {
-    vec: Vec<u8>,
-    row_width: usize,
-    height: usize,
-}
-
-fn plot(buffer: &mut Buffer, (x, y): (i32, i32)) {
-    if x < 0 || y < 0 {
-        eprintln!("invalid plot() coors: ({}, {})", x, y);
-        return;
-    }
-    //eprintln!("plot() coors: ({}, {})", x, y);
-    let (x, y) = (x as usize, y as usize);
-    let row_width = buffer.row_width.wrapping_div(8)
-        + if buffer.row_width.wrapping_rem(8) > 0 {
-            1
-        } else {
-            0
-        };
-    //std::dbg!(x.wrapping_div(8));
-    //std::dbg!(x.wrapping_rem(8));
-    let byte_column = x.wrapping_div(8) + 1;
-    let bit_column = x.wrapping_rem(8) as u32;
-    //std::dbg!(byte_column);
-    //std::dbg!(bit_column);
-    if let Some(cell) = buffer.vec.get_mut(y * row_width + byte_column) {
-        *cell |= 0x01_u8 << bit_column;
-    }
-}
-
-fn plot_line_with_width(buffer: &mut Buffer, point_a: (i32, i32), point_b: (i32, i32), wd: f64) {
-    let width2 = wd / 2.0;
-    plot_line_width(buffer, point_a, point_b, 1.0);
-    for w in ((-1.0 * width2) as i32)..(width2 as i32) {
-        plot_line_width(
-            buffer,
-            (point_a.0 + w, point_a.1),
-            (point_b.0 + w, point_b.1),
-            1.0,
-        );
-    }
-}
-
-fn plot_line_width(
-    buffer: &mut Buffer,
-    (mut x0, mut y0): (i32, i32),
-    (x1, y1): (i32, i32),
-    wd: f64,
-) {
-    //eprintln!(
-    //    "plot_line_width: ({}, {}), ({}, {}) width = {}",
-    //    x0, y0, x1, y1, wd
-    //);
-    /* Bresenham's line algorithm */
-    let dx = (x1 - x0).abs();
-    let sx = if x0 < x1 { 1 } else { -1 };
-    let dy = (y1 - y0).abs();
-    let sy = if y0 < y1 { 1 } else { -1 };
-    let mut err = dx - dy;
-    /* error value e_xy */
-    let mut e2: i32;
-    let mut x2: i32;
-    let mut y2: i32;
-    let ed: f64 = if (dx + dy) == 0 {
-        1.0
-    } else {
-        f64::sqrt((dx * dx) as f64 + (dy * dy) as f64)
-    };
-    let mut loop_ctr = 0;
-    let mut points = vec![];
-    let wd = (wd + 1.0) / 2.0;
-    //eprintln!("wd = {}, ed = {}", wd, ed);
-    loop {
-        points.push((x0, y0));
-        plot(buffer, (x0, y0));
-        e2 = err;
-        x2 = x0;
-        if 2 * e2 >= -dx {
-            /* x step */
-            //eprintln!(" x step ");
-            e2 += dy;
-            y2 = y0;
-            while e2 < ((ed as f64 * wd) as i32) && (y1 != y2 || dx > dy) {
-                y2 += sy;
-                plot(buffer, (x0, y2));
-                points.push((x0, y2));
-                e2 += dx;
-            }
-            if x0 == x1 {
-                break;
-            };
-            e2 = err;
-            err -= dy;
-            x0 += sx;
-        }
-        if 2 * e2 <= dy {
-            /* y step */
-            //eprintln!(" y step ");
-            e2 = dx - e2;
-            while e2 < ((ed as f64 * wd) as i32) && (x1 != x2 || dx < dy) {
-                x2 += sx;
-                plot(buffer, (x2, y0));
-                points.push((x2, y0));
-                e2 += dy;
-            }
-            if y0 == y1 {
-                break;
-            };
-            err += dx;
-            y0 += sy;
-        }
-        loop_ctr += 1;
-    }
-}
-
-fn plot_ellipse(
-    buffer: &mut Buffer,
-    (xm, ym): (i32, i32),
-    (a, b): (i32, i32),
-    quadrants: [bool; 4],
-    wd: f64,
-) {
-    let mut x = -a;
-    let mut y = 0;
-    let mut e2 = b;
-    let mut dx = (1 + 2 * x) * e2 * e2;
-    let mut dy = x * x;
-    let mut err = dx + dy;
-    loop {
-        if quadrants[0] {
-            plot(buffer, (xm - x, ym + y)); /*   I. Quadrant */
-        }
-        if quadrants[1] {
-            plot(buffer, (xm + x, ym + y)); /*  II. Quadrant */
-        }
-        if quadrants[2] {
-            plot(buffer, (xm + x, ym - y)); /* III. Quadrant */
-        }
-        if quadrants[3] {
-            plot(buffer, (xm - x, ym - y)); /*  IV. Quadrant */
-        }
-        e2 = 2 * err;
-        if e2 >= dx {
-            x += 1;
-            dx += 2 * b * b;
-            err += dx;
-            //err += dx += 2*(long)b*b; }    /* x step */
-        }
-        if e2 <= dy {
-            y += 1;
-            dy += 2 * a * a;
-            err += dy;
-            //err += dy += 2*(long)a*a; }    /* y step */
-        }
-        if x > 0 {
-            break;
-        }
-    }
-    while y < b {
-        /* to early stop for flat ellipses with a=1, */
-        y += 1;
-        plot(buffer, (xm, ym + y)); /* -> finish tip of ellipse */
-        plot(buffer, (xm, ym - y));
-    }
-}
-
-fn create_eye_pixmap2(t: f64) -> Vec<u8> {
-    let mut ret = Buffer {
-        vec: EYES.bits.to_vec(),
+fn create_eye_pixmap(t: f64) -> Vec<u8> {
+    let mut ret = EYES.bits.to_vec();
+    let mut buf = Buffer {
+        vec: &mut ret,
         row_width: EYES.width,
         height: EYES.height,
     };
@@ -300,7 +176,7 @@ fn create_eye_pixmap2(t: f64) -> Vec<u8> {
     let center_point = (((3 * EYES.width) / 2) as i32, (EYES.height / 2) as i32);
     //println!("center_point: {:?}", center_point);
 
-    let mut plot_point = move |points: &mut Vec<Vec<bool>>, point| {
+    let plot_point = move |points: &mut Vec<Vec<bool>>, point| {
         //eprintln!("plot_point: {:?}", point);
         let (x, y) = point;
         if y as usize >= points.len() || x as usize >= points[y as usize].len() {
@@ -309,18 +185,18 @@ fn create_eye_pixmap2(t: f64) -> Vec<u8> {
         points[y as usize][x as usize] = true;
     };
 
-    //plot(&mut ret, top_point);
+    //plot(&mut buf, top_point);
     plot_point(&mut points, top_point);
     plot_point(&mut points, bottom_point);
 
-    let W64 = EYES.width as f64;
+    let W64 = EYES.width as f64 - 2. * t;
     let H64 = EYES.height as f64;
     let H64_2 = H64 / 2.0;
 
     let mut cos_theta_i; //= f64::cos(FRAC_PI_2 + std::dbg!(f64::acos((W64/r))));
     let mut sin_theta_i; //= f64::sin(FRAC_PI_2 + f64::acos((W64/r)));
 
-    let mut r: f64 = f64::sqrt(W64.powi(2) + (H64_2).powi(2));
+    let r: f64 = f64::sqrt(W64.powi(2) + (H64_2).powi(2));
     //std::dbg!(H64_2);
     //std::dbg!(r);
     //std::dbg!(H64_2 / r);
@@ -328,12 +204,16 @@ fn create_eye_pixmap2(t: f64) -> Vec<u8> {
     //   println!("theta_i: {:?}", theta_i);
 
     for y_k in top_point.1..=bottom_point.1 {
-        sin_theta_i = ((y_k - center_point.1) as f64 / r);
+        sin_theta_i = (y_k - center_point.1) as f64 / r;
         cos_theta_i = f64::sqrt(1. - sin_theta_i.powi(2));
 
         let x_k = (center_point.0 + (r * cos_theta_i) as i32) - center_point.0 - EYES.width as i32;
         plot_point(&mut points, (x_k, y_k));
-        plot(&mut ret, (x_k, y_k));
+        plot(&mut buf, (x_k, y_k));
+        let x_k = center_point.0 + center_point.0 / 2
+            - ((center_point.0 + (r * cos_theta_i) as i32) - center_point.0 - EYES.width as i32);
+        plot_point(&mut points, (x_k, y_k));
+        plot(&mut buf, (x_k, y_k));
     }
     //eprintln!("got points:");
     //for row in points {
@@ -342,11 +222,11 @@ fn create_eye_pixmap2(t: f64) -> Vec<u8> {
     //    }
     //    println!("");
     //}
-    //for b in ret.iter_mut() {
+    //for b in buf.iter_mut() {
     //    *b = 0b10101010;
     //}
 
-    ret.vec
+    ret
 }
 
 fn create_tail_pixmap(t: f64) -> Vec<u8> {
@@ -391,8 +271,9 @@ fn create_tail_pixmap(t: f64) -> Vec<u8> {
     sin_theta = f64::sin(angle);
     cos_theta = f64::cos(angle);
 
-    let mut ret = Buffer {
-        vec: TAIL.bits.to_vec(),
+    let mut ret = TAIL.bits.to_vec();
+    let mut buf = Buffer {
+        vec: &mut ret,
         row_width: TAIL.width,
         height: TAIL.height,
     };
@@ -412,16 +293,16 @@ fn create_tail_pixmap(t: f64) -> Vec<u8> {
     const WIDTH: f64 = 15.0;
     const WIDTH2: f64 = WIDTH / 2.0;
     for window in new_tail.as_slice().windows(2) {
-        let mut point_a = window[0];
-        let mut point_b = window[1];
-        plot_line_with_width(&mut ret, point_a, point_b, WIDTH as _);
+        let point_a = window[0];
+        let point_b = window[1];
+        plot_line_with_width(&mut buf, point_a, point_b, WIDTH as _);
     }
 
     let mut last_point = *new_tail.last().unwrap();
     last_point.1 += 1;
     for b in 0..=((0.8 * WIDTH2) as i32) {
         plot_ellipse(
-            &mut ret,
+            &mut buf,
             last_point,
             (WIDTH2 as i32, b),
             [false, false, true, true],
@@ -429,11 +310,21 @@ fn create_tail_pixmap(t: f64) -> Vec<u8> {
         );
     }
 
-    ret.vec
+    ret
+}
+
+/*
+macro_rules! tr {
+    ($cond:expr ,? $then:expr ,: $else:expr) => {
+        if $cond {
+            $then
+        } else {
+            $else
+        }
+    };
 }
 
 fn create_eye_pixmap(t: f64) -> Vec<u8> {
-    /*
     const A: f64 = 0.7;
     let omega: f64 = 1.0;
     let phi: f64 = 3.0 * FRAC_PI_2;
@@ -477,7 +368,7 @@ fn create_eye_pixmap(t: f64) -> Vec<u8> {
         i += 1;
     }
     */
-    /*
+/*
         /*
          *  Create pixmap for drawing eye (and stippling on update)
          */
@@ -492,24 +383,37 @@ fn create_eye_pixmap(t: f64) -> Vec<u8> {
 
         return (eyeBitmap);
     }
-    */
     let mut ret = EYES.bits.to_vec();
     ret
 }
+    */
 
 fn main() {
-    let azure_blue = from_u8_rgb(0, 127, 255);
-    let red = from_u8_rgb(157, 37, 10);
-    let white = from_u8_rgb(255, 255, 255);
-    let black = 0;
-
-    let mut buffer: Vec<u32> = vec![white; CAT_WIDTH * CAT_HEIGHT];
-    let mut tails: Vec<Vec<u8>> = Vec::with_capacity(NUM_TAILS);
-    let mut eyes: Vec<Vec<u8>> = Vec::with_capacity(NUM_TAILS);
+    let mut buffer: Vec<u32> = vec![WHITE; CAT_WIDTH * CAT_HEIGHT];
+    let mut tails_frames: Vec<Image> = Vec::with_capacity(NUM_TAILS);
+    let mut eyes_frames: Vec<Image> = Vec::with_capacity(NUM_TAILS);
 
     for i in 0..NUM_TAILS {
-        tails.push(create_tail_pixmap(i as f64 * PI / (NUM_TAILS as f64)));
-        eyes.push(create_eye_pixmap2(i as f64 * PI / (NUM_TAILS as f64)));
+        tails_frames.push(Image {
+            bytes: bits_to_bytes(
+                &create_tail_pixmap(i as f64 * PI / (NUM_TAILS as f64)),
+                TAIL.width,
+            ),
+            width: TAIL.width,
+            height: TAIL.height,
+            x_offset: TAIL.x_offset,
+            y_offset: TAIL.y_offset,
+        });
+        eyes_frames.push(Image {
+            bytes: bits_to_bytes(
+                &create_eye_pixmap(i as f64 * PI / (NUM_TAILS as f64)),
+                EYES.width,
+            ),
+            width: EYES.width,
+            height: EYES.height,
+            x_offset: EYES.x_offset,
+            y_offset: EYES.y_offset,
+        });
     }
 
     let mut window = Window::new(
@@ -530,65 +434,88 @@ fn main() {
 
     // Limit to max ~60 fps update rate
     window.limit_update_rate(Some(std::time::Duration::from_micros(16600)));
-    CATWHITE.draw(&mut buffer, white, Some(white));
-    CATBACK.draw(&mut buffer, black, None);
-    CATTIE.draw(&mut buffer, azure_blue, None);
-    TAIL.draw(&mut buffer, black, None);
+
+    let catwhite = Image::from(CATWHITE);
+    catwhite.draw(&mut buffer, WHITE, Some(WHITE));
+    let catback = Image::from(CATBACK);
+    catback.draw(&mut buffer, BLACK, None);
+    let cattie = Image::from(CATTIE);
+    cattie.draw(&mut buffer, AZURE_BLUE, None);
+    let tail = Image::from(TAIL);
+    tail.draw(&mut buffer, BLACK, None);
+    let eyes = Image::from(EYES);
+    eyes.draw(&mut buffer, BLACK, None);
+
+    //CATTIE.draw(&mut buffer, AZURE_BLUE, None);
+    //TAIL.draw(&mut buffer, black, None);
     //EYES.draw(&mut buffer, black, None);
     /*
-    let mut bits = CATBACK.bits.to_vec();
-    for i in 0..bits.len() {
-        bits[i] = 0;
-    }
-    let test: Bitmap<'_> = Bitmap {
-        bits: &bits,
-        width: CAT_WIDTH,
-        height: CAT_HEIGHT,
-        x_offset: 0,
-        y_offset: 0,
-    };
-    test.draw(&mut buffer, black, Some(white));
-    //plot_line_width(&mut bits, (25, 0), (25, 40), 5.0);
-    for i in 0..4 {
-        plot_line_width(
-            &mut bits,
-            (30, 150 + i * 10),
-            (55, 150 + i * 10),
-            1.0 + i as f64 * 1.0,
-        );
-    }
-    //plot_line_width(&mut bits, (30, 150), (35, 150), 1.0);
-    //plot_line_width(&mut bits, (35, 160), (30, 160), 1.0);
-    let test: Bitmap<'_> = Bitmap {
-        bits: &bits,
-        width: CAT_WIDTH,
-        height: CAT_HEIGHT,
-        x_offset: 0,
-        y_offset: 0,
-    };
-    test.draw(&mut buffer, black, Some(white));
-    */
+     */
 
+    let _blank_face = Image {
+        bytes: vec![WHITE; hands::FACE_WIDTH * hands::FACE_HEIGHT],
+        width: hands::FACE_WIDTH,
+        height: hands::FACE_HEIGHT,
+        x_offset: hands::FACE_OFFSET_X,
+        y_offset: hands::FACE_OFFSET_Y,
+    };
+    let mut hour_hand = Image {
+        bytes: vec![WHITE; hands::FACE_WIDTH * hands::FACE_HEIGHT],
+        width: hands::FACE_WIDTH,
+        height: hands::FACE_HEIGHT,
+        x_offset: hands::FACE_OFFSET_X,
+        y_offset: hands::FACE_OFFSET_Y,
+    };
+    let mut second_hand = Image {
+        bytes: vec![WHITE; hands::FACE_WIDTH * hands::FACE_HEIGHT],
+        width: hands::FACE_WIDTH,
+        height: hands::FACE_HEIGHT,
+        x_offset: hands::FACE_OFFSET_X,
+        y_offset: hands::FACE_OFFSET_Y,
+    };
     let mut i: usize = 0;
     let mut up = true;
+    let mut system_now_second;
+    let mut now_second = Instant::now();
+    let mut seconds;
+    let _now = SystemTime::now();
+    let hour: u8 = 13;
     while window.is_open() && !window.is_key_down(Key::Escape) && !window.is_key_down(Key::Q) {
-        let tail: Bitmap<'_> = Bitmap {
-            bits: &tails[i],
-            ..TAIL
-        };
-        TAIL.draw(&mut buffer, black, Some(white));
-        tail.draw(&mut buffer, black, None);
-        let eye: Bitmap<'_> = Bitmap {
-            bits: &eyes[i],
-            ..EYES
-        };
-        EYES.draw(&mut buffer, black, Some(white));
-        eye.draw(&mut buffer, red, None);
+        let cur_tail = &tails_frames[i];
+        tail.draw(&mut buffer, BLACK, Some(WHITE));
+        cur_tail.draw(&mut buffer, BLACK, None);
+        let cur_eyes = &eyes_frames[i];
+        eyes.draw(&mut buffer, BLACK, Some(WHITE));
+        cur_eyes.draw(&mut buffer, RED, None);
+
+        let new_now_second = Instant::now();
+
+        if new_now_second - now_second >= Duration::from_secs(1) {
+            now_second = new_now_second;
+            system_now_second = SystemTime::now();
+            seconds = system_now_second
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs();
+            //blank_face.draw(&mut buffer, WHITE, Some(WHITE));
+            second_hand.draw(&mut buffer, WHITE, None);
+            second_hand.clear();
+            hands::draw_second(&mut second_hand, 23, 2, -5, (seconds as f64) / 60.0);
+            second_hand.draw(&mut buffer, BLACK, None);
+        }
+        //if minute has passed... {
+        //blank_face.draw(&mut buffer, WHITE, Some(WHITE));
+        hour_hand.draw(&mut buffer, WHITE, None);
+        hour_hand.clear();
+        hands::draw_second(&mut hour_hand, 13, 2, -5, (hour as f64) / 12.0);
+        hour_hand.draw(&mut buffer, BLACK, None);
+        //}
+
         if up {
-            if i + 1 == tails.len() {
+            if i + 1 == tails_frames.len() {
                 up = false;
             } else {
-                i = (i + 1).wrapping_rem(tails.len());
+                i = (i + 1).wrapping_rem(tails_frames.len());
             }
         } else {
             if i == 0 {
