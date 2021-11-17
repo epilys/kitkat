@@ -20,6 +20,7 @@
  */
 
 use super::*;
+use std::collections::VecDeque;
 pub struct Image {
     pub bytes: Vec<u32>,
     pub width: usize,
@@ -41,6 +42,15 @@ impl From<Bitmap<'_>> for Image {
 }
 
 impl Image {
+    pub fn new(width: usize, height: usize, x_offset: usize, y_offset: usize) -> Self {
+        Image {
+            bytes: vec![WHITE; width * height],
+            width,
+            height,
+            x_offset,
+            y_offset,
+        }
+    }
     pub fn draw(&self, buffer: &mut Vec<u32>, fg: u32, bg: Option<u32>) {
         for y in 0..self.height {
             for x in 0..self.width {
@@ -76,7 +86,7 @@ impl Image {
         //std::dbg!(self.width);
         //std::dbg!(self.height);
         //std::dbg!(self.width * self.height);
-        if x < 0 || y < 0 {
+        if x < 0 || y < 0 || y >= (self.height as i32) || x >= (self.width as i32) {
             eprintln!("invalid plot() coors: ({}, {})", x, y);
             return;
         }
@@ -84,18 +94,18 @@ impl Image {
         self.bytes[y * self.width + x] = BLACK;
     }
 
-    pub fn get(&mut self, x: i32, y: i32) -> u32 {
+    pub fn get(&mut self, x: i32, y: i32) -> Option<u32> {
         //std::dbg!((x, y));
         //std::dbg!(self.bytes.len());
         //std::dbg!(self.width);
         //std::dbg!(self.height);
         //std::dbg!(self.width * self.height);
-        if x < 0 || y < 0 {
+        if x < 0 || y < 0 || y >= (self.height as i32) || x >= (self.width as i32) {
             eprintln!("invalid plot() coors: ({}, {})", x, y);
-            return WHITE;
+            return None;
         }
         let (x, y): (usize, usize) = (x as _, y as _);
-        self.bytes[y * self.width + x]
+        Some(self.bytes[y * self.width + x])
     }
 
     pub fn plot_ellipse(
@@ -214,41 +224,66 @@ impl Image {
         }
     }
 
-    pub fn flood_fill(&mut self, mut x: i32, y: i32) {
-        eprintln!("flood fill x, y {:?}", (x, y));
-        if self.get(x, y) != WHITE {
+    pub fn flood_fill(&mut self, x: i32, y: i32) {
+        if self.get(x, y) != Some(WHITE) {
             return;
         }
-        let mut s = Vec::new();
-        s.push((x, x, y + 1, 1));
-        s.push((x, x, y, -1));
-        while let Some((mut x1, x2, y, dy)) = s.pop() {
-            x = x1;
-            if self.get(x, y) == WHITE {
-                //Inside(x, y):
-                while self.get(x - 1, y) == WHITE {
-                    // Inside(x - 1, y):
-                    self.plot(x - 1, y);
-                    x = x - 1;
-                }
+
+        let w = (self.width as i32);
+        let h = (self.height as i32);
+        let mut span_above: bool;
+        let mut span_below: bool;
+
+        let mut s = VecDeque::new();
+        s.push_back((x, y));
+
+        while let Some((x, y)) = s.pop_back() {
+            let mut x1 = x;
+            while x1 >= 0 && self.get(x1, y).map(|some| some == WHITE).unwrap_or(false) {
+                x1 -= 1;
             }
-            if x < x1 {
-                s.push((x, x1 - 1, y - dy, -dy));
-            }
-            while x1 < x2 {
-                while self.get(x1, y) == WHITE {
-                    //Inside(x1, y):
-                    self.plot(x1, y);
-                    x1 = x1 + 1;
-                    s.push((x, x1 - 1, y + dy, dy));
-                    if x1 - 1 > x2 {
-                        s.push((x2 + 1, x1 - 1, y - dy, -dy));
-                    }
-                    while x1 < x2 && self.get(x1, y) != WHITE {
-                        x1 = x1 + 1;
-                    }
-                    x = x1;
+            x1 += 1;
+            span_above = false;
+            span_below = false;
+            while x1 < w && self.get(x1, y).map(|some| some == WHITE).unwrap_or(false) {
+                self.plot(x1, y);
+                if !span_above
+                    && y > 0
+                    && self
+                        .get(x1, y - 1)
+                        .map(|some| some == WHITE)
+                        .unwrap_or(false)
+                {
+                    s.push_back((x1, y - 1));
+                    span_above = true;
+                } else if span_above
+                    && y > 0
+                    && self
+                        .get(x1, y - 1)
+                        .map(|some| some != WHITE)
+                        .unwrap_or(false)
+                {
+                    span_above = false;
                 }
+                if !span_below
+                    && y < h - 1
+                    && self
+                        .get(x1, y + 1)
+                        .map(|some| some == WHITE)
+                        .unwrap_or(false)
+                {
+                    s.push_back((x1, y + 1));
+                    span_below = true;
+                } else if span_below
+                    && y < h - 1
+                    && self
+                        .get(x1, y + 1)
+                        .map(|some| some != WHITE)
+                        .unwrap_or(false)
+                {
+                    span_below = false;
+                }
+                x1 += 1;
             }
         }
     }

@@ -151,7 +151,13 @@ const TAIL: Bitmap<'static> = Bitmap {
 const NUM_TAILS: usize = 10;
 
 const N_TAIL_PTS: usize = 7;
-const CENTER_TAIL: [(i32, i32); N_TAIL_PTS] = [
+const CENTER_TAIL: [(i32, i32); 3] = [
+    /*  "Center" tail points definition */
+    (0, 0),
+    (3, 26),
+    (10, 26),
+];
+const OFF_CENTER_TAIL: [(i32, i32); N_TAIL_PTS] = [
     /*  "Center" tail points definition */
     (0, 0),
     (0, 76),
@@ -353,11 +359,11 @@ fn create_tail_pixmap(t: f64) -> Vec<u8> {
         cos_theta = f64::cos(angle);
 
         for i in 0..N_TAIL_PTS {
-            off_center_tail[i].0 = ((CENTER_TAIL[i].0 as f64) * cos_theta
-                + ((CENTER_TAIL[i].1 as f64) * sin_theta))
+            off_center_tail[i].0 = ((OFF_CENTER_TAIL[i].0 as f64) * cos_theta
+                + ((OFF_CENTER_TAIL[i].1 as f64) * sin_theta))
                 as i32;
-            off_center_tail[i].1 = ((-1.0 * (CENTER_TAIL[i].0 as f64)) * sin_theta
-                + ((CENTER_TAIL[i].1 as f64) * cos_theta))
+            off_center_tail[i].1 = ((-1.0 * (OFF_CENTER_TAIL[i].0 as f64)) * sin_theta
+                + ((OFF_CENTER_TAIL[i].1 as f64) * cos_theta))
                 as i32;
         }
     }
@@ -411,6 +417,85 @@ fn create_tail_pixmap(t: f64) -> Vec<u8> {
     ret
 }
 
+fn create_tail_image(t: f64) -> Image {
+    /*  Pendulum parameters */
+    let mut sin_theta: f64;
+    let mut cos_theta: f64;
+    const A: f64 = 0.4;
+    let omega: f64 = 1.0;
+    let phi: f64 = 3.0 * FRAC_PI_2;
+    let mut angle: f64;
+
+    //    static XPoint tailOffset = { 74, -15 };
+    const TAIL_WIDTH: usize = 90;
+    const TAIL_HEIGHT: usize = 80;
+    const TAIL_OFFSET: (i32, i32) = ((TAIL_WIDTH / 2) as i32, 0);
+
+    let mut center_tail: Vec<(i32, i32)> = vec![(0, 0); 3]; /* center tail    */
+    let mut new_tail: Vec<(i32, i32)> = vec![(0, 0); 3]; /*  Tail at time "t"  */
+
+    {
+        /*
+         *  Create an "center" tail.
+         */
+        center_tail[0] = (0, 0);
+        center_tail[1] = (3, (TAIL_HEIGHT - 15) as i32);
+        center_tail[2] = (20, (TAIL_HEIGHT - 15) as i32);
+    }
+
+    /*
+     *  Compute pendulum function.
+     */
+    angle = A * f64::sin(omega * t + phi);
+    sin_theta = f64::sin(angle);
+    cos_theta = f64::cos(angle);
+
+    let mut buf = Image::new(
+        TAIL_WIDTH,
+        TAIL_HEIGHT,
+        CAT_WIDTH / 2 - TAIL_WIDTH / 2,
+        TAIL.y_offset,
+    );
+    buf.draw_outline();
+    /*
+     *  Rotate the center tail about its origin by "angle" degrees.
+     */
+    for i in 0..3 {
+        new_tail[i].0 = ((center_tail[i].0 as f64) * cos_theta
+            + ((center_tail[i].1 as f64) * sin_theta)) as i32;
+        new_tail[i].1 = ((center_tail[i].0 as f64 * -1.0) * sin_theta
+            + ((center_tail[i].1 as f64) * cos_theta)) as i32;
+
+        new_tail[i].0 += TAIL_OFFSET.0;
+        new_tail[i].1 += TAIL_OFFSET.1;
+    }
+
+    const WIDTH: f64 = 15.0;
+    const WIDTH2: f64 = WIDTH / 2.0;
+    buf.plot_line_width(new_tail[0], new_tail[1], 1.0);
+    buf.plot_line_width(new_tail[1], new_tail[2], 1.0);
+    buf.plot_line_width(new_tail[2], new_tail[0], 1.0);
+
+    let center = (
+        (new_tail[0].0 + new_tail[1].0 + new_tail[2].0) / 3,
+        (new_tail[0].1 + new_tail[1].1 + new_tail[2].1) / 3,
+    );
+    buf.flood_fill(center.0, center.1);
+
+    let mut last_point = *new_tail.last().unwrap();
+    last_point.0 -= WIDTH2 as i32;
+    last_point.1 += 1;
+    for b in 0..=((0.8 * WIDTH2) as i32) {
+        buf.plot_ellipse(
+            last_point,
+            (WIDTH2 as i32, b),
+            [true, true, false, false],
+            1.0,
+        );
+    }
+
+    buf
+}
 /*
 macro_rules! tr {
     ($cond:expr ,? $then:expr ,: $else:expr) => {
@@ -513,16 +598,21 @@ fn main() {
     let mut eyes_frames: Vec<Image> = Vec::with_capacity(NUM_TAILS);
 
     for i in 0..NUM_TAILS {
-        tails_frames.push(Image {
-            bytes: bits_to_bytes(
-                &create_tail_pixmap(i as f64 * PI / (NUM_TAILS as f64)),
-                TAIL.width,
-            ),
-            width: TAIL.width,
-            height: TAIL.height,
-            x_offset: TAIL.x_offset,
-            y_offset: TAIL.y_offset,
-        });
+        println!(
+            "for i {} I got t = {}",
+            i,
+            i as f64 * PI / (NUM_TAILS as f64)
+        );
+        tails_frames.push(create_tail_image(i as f64 * PI / (NUM_TAILS as f64)));
+        //    bytes: bits_to_bytes(
+        //        &create_tail_pixmap(i as f64 * PI / (NUM_TAILS as f64)),
+        //        TAIL.width,
+        //    ),
+        //    width: TAIL.width,
+        //    height: TAIL.height,
+        //    x_offset: TAIL.x_offset,
+        //    y_offset: TAIL.y_offset,
+        //});
         eyes_frames.push(create_eye_pixmap(i as f64 * PI / (NUM_TAILS as f64)));
     }
 
