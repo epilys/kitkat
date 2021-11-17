@@ -135,8 +135,8 @@ const EYES: Bitmap<'static> = Bitmap {
     bits: EYES_BITS,
     width: EYES_WIDTH,
     height: EYES_HEIGHT,
-    x_offset: 0,
-    y_offset: 0,
+    x_offset: CAT_WIDTH / 2,
+    y_offset: 30,
 };
 
 include!("tail.rs");
@@ -162,7 +162,88 @@ const CENTER_TAIL: [(i32, i32); N_TAIL_PTS] = [
     (21, 70),
 ];
 
-fn create_eye_pixmap(t: f64) -> Vec<u8> {
+fn create_eye_pixmap(t: f64) -> Image {
+    macro_rules! tr {
+        ($cond:expr ,? $then:expr ,: $else:expr) => {
+            if $cond {
+                $then
+            } else {
+                $else
+            }
+        };
+    }
+    let mut ret = Image {
+        bytes: vec![WHITE; 30 * 60],
+        width: 60,
+        height: 30,
+        x_offset: 47,
+        y_offset: 30,
+    };
+
+    //ret.draw_outline();
+
+    const A: f64 = 0.7;
+    let omega: f64 = 1.0;
+    let phi: f64 = 3.0 * FRAC_PI_2;
+    let mut u: f64;
+    let w: f64 = FRAC_PI_2;
+    /*  Sphere parameters    */
+    /*  Radius               */
+    let r: f64 = 1.0;
+    /*  Center of sphere     */
+    let x0: f64 = 0.0;
+    let y0: f64 = 0.0;
+    let z0: f64 = 2.0;
+
+    let angle: f64 = A * f64::sin(omega * t + phi) + w;
+    let mut points: Vec<(i32, i32)> = Vec::with_capacity(100);
+
+    let mut i = 0;
+    u = -1.0 * FRAC_PI_2;
+    while u < FRAC_PI_2 {
+        let x = x0 + r * f64::cos(u) * f64::cos(angle + PI / 7.0);
+        let z = z0 + r * f64::cos(u) * f64::sin(angle + PI / 7.0);
+        let y = y0 + r * f64::sin(u);
+
+        let a = ((tr!(z == 0.0 ,? x ,: x / z) * 23.0) + 12.0) as i32;
+        let b = ((tr!(z == 0.0 ,? y ,: y / z) * 23.0) + 11.0) as i32;
+        points.push((a, b));
+        u += 0.25;
+        i += 1;
+    }
+
+    u = FRAC_PI_2;
+    while u > -1.0 * FRAC_PI_2 {
+        let x = x0 + r * f64::cos(u) * f64::cos(angle - PI / 7.0);
+        let z = z0 + r * f64::cos(u) * f64::sin(angle - PI / 7.0);
+        let y = y0 + r * f64::sin(u);
+
+        let a = ((tr!(z == 0.0 ,? x ,: x / z) * 23.0) + 12.0) as i32;
+        let b = ((tr!(z == 0.0 ,? y ,: y / z) * 23.0) + 11.0) as i32;
+        points.push((a, b));
+        u -= 0.25;
+        i += 1;
+    }
+
+    let (_xf, _yf) = points[0];
+    for window in points.as_slice().windows(2) {
+        let point_a = window[0];
+        let point_b = window[1];
+        ret.plot_line_width(point_a, point_b, 1.);
+    }
+    //ret.flood_fill(xf, yf+1);
+    for j in 0..i {
+        points[j].0 += 31;
+    }
+    for window in points.as_slice().windows(2) {
+        let point_a = window[0];
+        let point_b = window[1];
+        ret.plot_line_width(point_a, point_b, 1.);
+    }
+
+    ret
+}
+fn create_eye_pixmap2(t: f64) -> Vec<u8> {
     let mut ret = EYES.bits.to_vec();
     let mut buf = Buffer {
         vec: &mut ret,
@@ -189,7 +270,7 @@ fn create_eye_pixmap(t: f64) -> Vec<u8> {
     plot_point(&mut points, top_point);
     plot_point(&mut points, bottom_point);
 
-    let W64 = EYES.width as f64 - 2. * t;
+    let W64 = EYES.width as f64 - 3. * t;
     let H64 = EYES.height as f64;
     let H64_2 = H64 / 2.0;
 
@@ -207,13 +288,30 @@ fn create_eye_pixmap(t: f64) -> Vec<u8> {
         sin_theta_i = (y_k - center_point.1) as f64 / r;
         cos_theta_i = f64::sqrt(1. - sin_theta_i.powi(2));
 
-        let x_k = (center_point.0 + (r * cos_theta_i) as i32) - center_point.0 - EYES.width as i32;
-        plot_point(&mut points, (x_k, y_k));
-        plot(&mut buf, (x_k, y_k));
-        let x_k = center_point.0 + center_point.0 / 2
-            - ((center_point.0 + (r * cos_theta_i) as i32) - center_point.0 - EYES.width as i32);
-        plot_point(&mut points, (x_k, y_k));
-        plot(&mut buf, (x_k, y_k));
+        if t >= 1.0 {
+            /* right */
+            let x_k = center_point.0 + center_point.0 / 2
+                - ((center_point.0 + (r * cos_theta_i) as i32)
+                    - center_point.0
+                    - EYES.width as i32);
+            plot_point(&mut points, (x_k, y_k));
+            plot(&mut buf, (x_k, y_k));
+
+            /* left */
+            /* increase left r */
+            let _offset = t * (EYES.width as f64);
+            let r = r + t;
+            let x_k =
+                (center_point.0 + (r * cos_theta_i) as i32) - center_point.0 - EYES.width as i32;
+            plot_point(&mut points, (x_k, y_k));
+            plot(&mut buf, (x_k, y_k));
+        } else {
+            /* left */
+            let x_k =
+                (center_point.0 + (r * cos_theta_i) as i32) - center_point.0 - EYES.width as i32;
+            plot_point(&mut points, (x_k, y_k));
+            plot(&mut buf, (x_k, y_k));
+        }
     }
     //eprintln!("got points:");
     //for row in points {
@@ -367,8 +465,29 @@ fn create_eye_pixmap(t: f64) -> Vec<u8> {
         u -= 0.25;
         i += 1;
     }
-    */
+
+    let mut ret = EYES.bits.to_vec();
+    let mut buf = Buffer {
+        vec: &mut ret,
+        row_width: EYES.width,
+        height: EYES.height,
+    };
+    for window in points.as_slice().windows(2) {
+        let point_a = window[0];
+        let point_b = window[1];
+        plot_line_with_width(&mut buf, point_a, point_b, 1.);
+    }
+    for j in 0 .. i {
+        points[j].0 -= 31;
+    }
+    for window in points.as_slice().windows(2) {
+        let point_a = window[0];
+        let point_b = window[1];
+        plot_line_with_width(&mut buf, point_a, point_b, 1.);
+    }
+*/
 /*
+     *
         /*
          *  Create pixmap for drawing eye (and stippling on update)
          */
@@ -404,16 +523,7 @@ fn main() {
             x_offset: TAIL.x_offset,
             y_offset: TAIL.y_offset,
         });
-        eyes_frames.push(Image {
-            bytes: bits_to_bytes(
-                &create_eye_pixmap(i as f64 * PI / (NUM_TAILS as f64)),
-                EYES.width,
-            ),
-            width: EYES.width,
-            height: EYES.height,
-            x_offset: EYES.x_offset,
-            y_offset: EYES.y_offset,
-        });
+        eyes_frames.push(create_eye_pixmap(i as f64 * PI / (NUM_TAILS as f64)));
     }
 
     let mut window = Window::new(
@@ -466,6 +576,13 @@ fn main() {
         x_offset: hands::FACE_OFFSET_X,
         y_offset: hands::FACE_OFFSET_Y,
     };
+    let mut minute_hand = Image {
+        bytes: vec![WHITE; hands::FACE_WIDTH * hands::FACE_HEIGHT],
+        width: hands::FACE_WIDTH,
+        height: hands::FACE_HEIGHT,
+        x_offset: hands::FACE_OFFSET_X,
+        y_offset: hands::FACE_OFFSET_Y,
+    };
     let mut second_hand = Image {
         bytes: vec![WHITE; hands::FACE_WIDTH * hands::FACE_HEIGHT],
         width: hands::FACE_WIDTH,
@@ -474,23 +591,28 @@ fn main() {
         y_offset: hands::FACE_OFFSET_Y,
     };
     let mut i: usize = 0;
+    let mut prev_i = i;
     let mut up = true;
     let mut system_now_second;
     let mut now_second = Instant::now();
     let mut seconds;
     let _now = SystemTime::now();
-    let hour: u8 = 13;
+    let hour: u8 = 16;
+    let mut minutes: u8 = 0;
+    let mut passed_seconds = 60;
     while window.is_open() && !window.is_key_down(Key::Escape) && !window.is_key_down(Key::Q) {
         let cur_tail = &tails_frames[i];
         tail.draw(&mut buffer, BLACK, Some(WHITE));
         cur_tail.draw(&mut buffer, BLACK, None);
         let cur_eyes = &eyes_frames[i];
-        eyes.draw(&mut buffer, BLACK, Some(WHITE));
-        cur_eyes.draw(&mut buffer, RED, None);
+        eyes_frames[prev_i].draw(&mut buffer, WHITE, None);
+        prev_i = i;
+        cur_eyes.draw(&mut buffer, BLACK, None);
 
         let new_now_second = Instant::now();
 
         if new_now_second - now_second >= Duration::from_secs(1) {
+            passed_seconds += 1;
             now_second = new_now_second;
             system_now_second = SystemTime::now();
             seconds = system_now_second
@@ -500,14 +622,24 @@ fn main() {
             //blank_face.draw(&mut buffer, WHITE, Some(WHITE));
             second_hand.draw(&mut buffer, WHITE, None);
             second_hand.clear();
-            hands::draw_second(&mut second_hand, 23, 2, -5, (seconds as f64) / 60.0);
+            hands::draw_second(&mut second_hand, 23, 1, -5, (seconds as f64) / 60.0);
             second_hand.draw(&mut buffer, BLACK, None);
         }
-        //if minute has passed... {
+        if passed_seconds >= 60 {
+            passed_seconds = 0;
+            minutes += 1;
+            if minutes == 60 {
+                minutes = 0;
+            }
+            minute_hand.draw(&mut buffer, WHITE, None);
+            minute_hand.clear();
+            hands::draw_second(&mut minute_hand, 29, 3, -5, (minutes as f64) / 60.0);
+        }
+        minute_hand.draw(&mut buffer, BLACK, None);
         //blank_face.draw(&mut buffer, WHITE, Some(WHITE));
         hour_hand.draw(&mut buffer, WHITE, None);
         hour_hand.clear();
-        hands::draw_second(&mut hour_hand, 13, 2, -5, (hour as f64) / 12.0);
+        hands::draw_second(&mut hour_hand, 18, 4, -5, (hour as f64) / 12.0);
         hour_hand.draw(&mut buffer, BLACK, None);
         //}
 

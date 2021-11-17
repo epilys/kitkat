@@ -84,6 +84,20 @@ impl Image {
         self.bytes[y * self.width + x] = BLACK;
     }
 
+    pub fn get(&mut self, x: i32, y: i32) -> u32 {
+        //std::dbg!((x, y));
+        //std::dbg!(self.bytes.len());
+        //std::dbg!(self.width);
+        //std::dbg!(self.height);
+        //std::dbg!(self.width * self.height);
+        if x < 0 || y < 0 {
+            eprintln!("invalid plot() coors: ({}, {})", x, y);
+            return WHITE;
+        }
+        let (x, y): (usize, usize) = (x as _, y as _);
+        self.bytes[y * self.width + x]
+    }
+
     pub fn plot_ellipse(
         &mut self,
         (xm, ym): (i32, i32),
@@ -196,6 +210,45 @@ impl Image {
                 };
                 err += dx;
                 y0 += sy;
+            }
+        }
+    }
+
+    pub fn flood_fill(&mut self, mut x: i32, y: i32) {
+        eprintln!("flood fill x, y {:?}", (x, y));
+        if self.get(x, y) != WHITE {
+            return;
+        }
+        let mut s = Vec::new();
+        s.push((x, x, y + 1, 1));
+        s.push((x, x, y, -1));
+        while let Some((mut x1, x2, y, dy)) = s.pop() {
+            x = x1;
+            if self.get(x, y) == WHITE {
+                //Inside(x, y):
+                while self.get(x - 1, y) == WHITE {
+                    // Inside(x - 1, y):
+                    self.plot(x - 1, y);
+                    x = x - 1;
+                }
+            }
+            if x < x1 {
+                s.push((x, x1 - 1, y - dy, -dy));
+            }
+            while x1 < x2 {
+                while self.get(x1, y) == WHITE {
+                    //Inside(x1, y):
+                    self.plot(x1, y);
+                    x1 = x1 + 1;
+                    s.push((x, x1 - 1, y + dy, dy));
+                    if x1 - 1 > x2 {
+                        s.push((x2 + 1, x1 - 1, y - dy, -dy));
+                    }
+                    while x1 < x2 && self.get(x1, y) != WHITE {
+                        x1 = x1 + 1;
+                    }
+                    x = x1;
+                }
             }
         }
     }
