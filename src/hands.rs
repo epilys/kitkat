@@ -23,14 +23,14 @@ use super::*;
 /*
  *  Clock hand stuff
  */
-//const VERTICES_IN_HANDS: i32 = 4; /*  Hands are triangles      */
-//const SECOND_HAND_FRACT: i32 = 90; /*  Percentages of radius    */
-//const MINUTE_HAND_FRACT: i32 = 70;
-//const HOUR_HAND_FRACT: i32 = 40;
-//const HAND_WIDTH_FRACT: i32 = 7;
-//const SECOND_WIDTH_FRACT: i32 = 5;
+//const VERTICES_IN_HANDS: i64 = 4; /*  Hands are triangles      */
+//const SECOND_HAND_FRACT: i64 = 90; /*  Percentages of radius    */
+//const MINUTE_HAND_FRACT: i64 = 70;
+//const HOUR_HAND_FRACT: i64 = 40;
+//const HAND_WIDTH_FRACT: i64 = 7;
+//const SECOND_WIDTH_FRACT: i64 = 5;
 //
-//const SECOND_HAND_TIME: i32 = 30; /*  Update limit for second hand*/
+//const SECOND_HAND_TIME: i64 = 30; /*  Update limit for second hand*/
 pub const FACE_WIDTH: usize = 80;
 pub const FACE_HEIGHT: usize = 80;
 pub const FACE_OFFSET_X: usize = CAT_WIDTH / 2 - FACE_WIDTH / 2 - 1;
@@ -45,7 +45,7 @@ pub const FACE_OFFSET_Y: usize = CAT_HEIGHT / 2 - FACE_HEIGHT / 2;
  *
  */
 /*
-pub fn draw_hand(_buffer: &mut Buffer, _length: i32, width: i32, fraction_of_a_circle: f64) {
+pub fn draw_hand(_buffer: &mut Buffer, _length: i64, width: i64, fraction_of_a_circle: f64) {
     let angle: f64;
     let cos_angle: f64;
     let sin_angle: f64;
@@ -53,12 +53,12 @@ pub fn draw_hand(_buffer: &mut Buffer, _length: i32, width: i32, fraction_of_a_c
     let ws: f64;
     let wc: f64;
 
-    let mut _x: i32;
-    let mut _y: i32;
-    let mut _x1: i32;
-    let mut _y1: i32;
-    let mut _x2: i32;
-    let mut _y2: i32;
+    let mut _x: i64;
+    let mut _y: i64;
+    let mut _x1: i64;
+    let mut _y1: i64;
+    let mut _x2: i64;
+    let mut _y2: i64;
 
     /*
      *  A full circle is 2 PI radians.
@@ -111,9 +111,9 @@ pub fn draw_hand(_buffer: &mut Buffer, _length: i32, width: i32, fraction_of_a_c
  */
 pub fn draw_second(
     buffer: &mut Image,
-    length: i32,
-    width: i32,
-    offset: i32,
+    length: i64,
+    width: i64,
+    offset: i64,
     fraction_of_a_circle: f64,
 ) {
     let width = width as f64;
@@ -129,8 +129,8 @@ pub fn draw_second(
     let wc: f64;
 
     let mid: f64;
-    let mut _x: i32;
-    let mut _y: i32;
+    let mut _x: i64;
+    let mut _y: i64;
 
     /*
      *  A full circle is 2 PI radians.
@@ -171,41 +171,41 @@ pub fn draw_second(
     ws = width * sin_angle;
 
     //buffer.draw_outline();
-    let center_point = ((FACE_WIDTH / 2) as i32, (FACE_HEIGHT / 2) as i32); //(5,50);
+    let center_point = ((FACE_WIDTH / 2) as i64, (FACE_HEIGHT / 2) as i64); //(5,50);
                                                                             /*1 ---- 2 */
     {
-        let x0 = center_point.0 + (length * sin_angle) as i32;
-        let y0 = center_point.1 - (length * cos_angle) as i32;
-        let x1 = center_point.0 + (ms - wc) as i32;
-        let y1 = center_point.1 - (mc + ws) as i32;
-        buffer.plot_line_width((x0, y0), (x1, y1), 1.0);
+        let x0 = center_point.0 + (length * sin_angle) as i64;
+        let y0 = center_point.1 - (length * cos_angle) as i64;
+        let x1 = center_point.0 + (ms - wc) as i64;
+        let y1 = center_point.1 - (mc + ws) as i64;
+        buffer.plot_line_width((x0, y0), (x1, y1), 0.0);
         //eprintln!("1-2: 0: {:?} 1: {:?}", (x0, y0), (x1, y1));
     }
     /* 2-----3 */
     {
-        let x0 = center_point.0 + (ms - wc) as i32;
-        let y0 = center_point.1 - (mc + ws) as i32;
-        let x1 = center_point.0 + (offset * sin_angle) as i32;
-        let y1 = center_point.1 - (offset * cos_angle) as i32;
-        buffer.plot_line_width((x0, y0), (x1, y1), 1.0);
+        let x0 = center_point.0 + (ms - wc) as i64;
+        let y0 = center_point.1 - (mc + ws) as i64;
+        let x1 = center_point.0 + (offset * sin_angle) as i64;
+        let y1 = center_point.1 - (offset * cos_angle) as i64;
+        buffer.plot_line_width((x0, y0), (x1, y1), 0.0);
         //eprintln!("2-3: 0: {:?} 1: {:?}", (x0, y0), (x1, y1));
     }
     /* 3-----4 */
     {
-        let x0 = center_point.0 + (offset * sin_angle) as i32;
-        let y0 = center_point.1 - (offset * cos_angle) as i32;
-        let x1 = center_point.0 + (ms + wc) as i32;
-        let y1 = center_point.1 - (mc - ws) as i32;
-        buffer.plot_line_width((x0, y0), (x1, y1), 1.0);
+        let x0 = center_point.0 + (offset * sin_angle) as i64;
+        let y0 = center_point.1 - (offset * cos_angle) as i64;
+        let x1 = center_point.0 + (ms + wc) as i64;
+        let y1 = center_point.1 - (mc - ws) as i64;
+        buffer.plot_line_width((x0, y0), (x1, y1), 0.0);
         //eprintln!("3-4: 0: {:?} 1: {:?}", (x0, y0), (x1, y1));
     }
     /* 4-----1 */
     {
-        let x0 = center_point.0 + (ms + wc) as i32;
-        let y0 = center_point.1 - (mc - ws) as i32;
-        let x1 = center_point.0 + (length * sin_angle) as i32;
-        let y1 = center_point.1 - (length * cos_angle) as i32;
-        buffer.plot_line_width((x0, y0), (x1, y1), 1.0);
+        let x0 = center_point.0 + (ms + wc) as i64;
+        let y0 = center_point.1 - (mc - ws) as i64;
+        let x1 = center_point.0 + (length * sin_angle) as i64;
+        let y1 = center_point.1 - (length * cos_angle) as i64;
+        buffer.plot_line_width((x0, y0), (x1, y1), 0.0);
         //eprintln!("4-1: 0: {:?} 1: {:?}", (x0, y0), (x1, y1));
     }
 }

@@ -25,7 +25,7 @@ pub struct Buffer<'v> {
     pub height: usize,
 }
 
-pub fn plot(buffer: &'_ mut Buffer<'_>, (x, y): (i32, i32)) {
+pub fn plot(buffer: &'_ mut Buffer<'_>, (x, y): (i64, i64)) {
     if x < 0 || y < 0 {
         eprintln!("invalid plot() coors: ({}, {})", x, y);
         return;
@@ -51,13 +51,13 @@ pub fn plot(buffer: &'_ mut Buffer<'_>, (x, y): (i32, i32)) {
 
 pub fn plot_line_with_width(
     buffer: &'_ mut Buffer<'_>,
-    point_a: (i32, i32),
-    point_b: (i32, i32),
+    point_a: (i64, i64),
+    point_b: (i64, i64),
     wd: f64,
 ) {
     let width2 = wd / 2.0;
     plot_line_width(buffer, point_a, point_b, 1.0);
-    for w in ((-1.0 * width2) as i32)..(width2 as i32) {
+    for w in ((-1.0 * width2) as i64)..(width2 as i64) {
         plot_line_width(
             buffer,
             (point_a.0 + w, point_a.1),
@@ -69,8 +69,8 @@ pub fn plot_line_with_width(
 
 pub fn plot_line_width(
     buffer: &'_ mut Buffer<'_>,
-    (mut x0, mut y0): (i32, i32),
-    (x1, y1): (i32, i32),
+    (mut x0, mut y0): (i64, i64),
+    (x1, y1): (i64, i64),
     wd: f64,
 ) {
     //eprintln!(
@@ -84,9 +84,9 @@ pub fn plot_line_width(
     let sy = if y0 < y1 { 1 } else { -1 };
     let mut err = dx - dy;
     /* error value e_xy */
-    let mut e2: i32;
-    let mut x2: i32;
-    let mut y2: i32;
+    let mut e2: i64;
+    let mut x2: i64;
+    let mut y2: i64;
     let ed: f64 = if (dx + dy) == 0 {
         1.0
     } else {
@@ -105,7 +105,7 @@ pub fn plot_line_width(
             //eprintln!(" x step ");
             e2 += dy;
             y2 = y0;
-            while e2 < ((ed as f64 * wd) as i32) && (y1 != y2 || dx > dy) {
+            while e2 < ((ed as f64 * wd) as i64) && (y1 != y2 || dx > dy) {
                 y2 += sy;
                 plot(buffer, (x0, y2));
                 points.push((x0, y2));
@@ -122,7 +122,7 @@ pub fn plot_line_width(
             /* y step */
             //eprintln!(" y step ");
             e2 = dx - e2;
-            while e2 < ((ed as f64 * wd) as i32) && (x1 != x2 || dx < dy) {
+            while e2 < ((ed as f64 * wd) as i64) && (x1 != x2 || dx < dy) {
                 x2 += sx;
                 plot(buffer, (x2, y0));
                 points.push((x2, y0));
@@ -139,8 +139,8 @@ pub fn plot_line_width(
 
 pub fn plot_ellipse(
     buffer: &'_ mut Buffer<'_>,
-    (xm, ym): (i32, i32),
-    (a, b): (i32, i32),
+    (xm, ym): (i64, i64),
+    (a, b): (i64, i64),
     quadrants: [bool; 4],
     _wd: f64,
 ) {

@@ -186,7 +186,7 @@ fn create_eye_pixmap(t: f64) -> Image {
     let z0: f64 = 2.0;
 
     let angle: f64 = A * f64::sin(omega * t + phi) + w;
-    let mut points: Vec<(i32, i32)> = Vec::with_capacity(100);
+    let mut points: Vec<(i64, i64)> = Vec::with_capacity(100);
 
     let mut i = 0;
     u = -1.0 * FRAC_PI_2;
@@ -195,8 +195,8 @@ fn create_eye_pixmap(t: f64) -> Image {
         let z = z0 + r * f64::cos(u) * f64::sin(angle + PI / 7.0);
         let y = y0 + r * f64::sin(u);
 
-        let a = ((tr!(z == 0.0 ,? x ,: x / z) * 23.0) + 12.0) as i32;
-        let b = ((tr!(z == 0.0 ,? y ,: y / z) * 23.0) + 11.0) as i32;
+        let a = ((tr!(z == 0.0 ,? x ,: x / z) * 23.0) + 12.0) as i64;
+        let b = ((tr!(z == 0.0 ,? y ,: y / z) * 23.0) + 11.0) as i64;
         points.push((a, b));
         u += 0.25;
         i += 1;
@@ -208,8 +208,8 @@ fn create_eye_pixmap(t: f64) -> Image {
         let z = z0 + r * f64::cos(u) * f64::sin(angle - PI / 7.0);
         let y = y0 + r * f64::sin(u);
 
-        let a = ((tr!(z == 0.0 ,? x ,: x / z) * 23.0) + 12.0) as i32;
-        let b = ((tr!(z == 0.0 ,? y ,: y / z) * 23.0) + 11.0) as i32;
+        let a = ((tr!(z == 0.0 ,? x ,: x / z) * 23.0) + 12.0) as i64;
+        let b = ((tr!(z == 0.0 ,? y ,: y / z) * 23.0) + 11.0) as i64;
         points.push((a, b));
         u -= 0.25;
         i += 1;
@@ -221,9 +221,9 @@ fn create_eye_pixmap(t: f64) -> Image {
         let point_b = window[1];
         cx += point_b.0;
         cy += point_b.1;
-        ret.plot_line_width(point_a, point_b, 1.);
+        ret.plot_line_width(point_a, point_b, 0.);
     }
-    let n = points.len() as i32;
+    let n = points.len() as i64;
     ret.flood_fill(cx / n, cy / n);
     for j in 0..i {
         points[j].0 += 31;
@@ -234,7 +234,7 @@ fn create_eye_pixmap(t: f64) -> Image {
         let point_b = window[1];
         cx += point_b.0;
         cy += point_b.1;
-        ret.plot_line_width(point_a, point_b, 1.);
+        ret.plot_line_width(point_a, point_b, 0.);
     }
     ret.flood_fill(cx / n, cy / n);
 
@@ -249,10 +249,10 @@ fn create_eye_pixmap2(t: f64) -> Vec<u8> {
         height: EYES.height,
     };
     let mut points: Vec<Vec<bool>> = vec![vec![false; EYES.width + 1]; EYES.height + 1];
-    let top_point: (i32, i32) = ((EYES.width / 2) as i32, 0);
-    let bottom_point: (i32, i32) = ((EYES.width / 2) as i32, EYES.height as i32);
+    let top_point: (i64, i64) = ((EYES.width / 2) as i64, 0);
+    let bottom_point: (i64, i64) = ((EYES.width / 2) as i64, EYES.height as i64);
 
-    let center_point = (((3 * EYES.width) / 2) as i32, (EYES.height / 2) as i32);
+    let center_point = (((3 * EYES.width) / 2) as i64, (EYES.height / 2) as i64);
     //println!("center_point: {:?}", center_point);
 
     let plot_point = move |points: &mut Vec<Vec<bool>>, point| {
@@ -289,9 +289,9 @@ fn create_eye_pixmap2(t: f64) -> Vec<u8> {
         if t >= 1.0 {
             /* right */
             let x_k = center_point.0 + center_point.0 / 2
-                - ((center_point.0 + (r * cos_theta_i) as i32)
+                - ((center_point.0 + (r * cos_theta_i) as i64)
                     - center_point.0
-                    - EYES.width as i32);
+                    - EYES.width as i64);
             plot_point(&mut points, (x_k, y_k));
             plot(&mut buf, (x_k, y_k));
 
@@ -300,13 +300,13 @@ fn create_eye_pixmap2(t: f64) -> Vec<u8> {
             let _offset = t * (EYES.width as f64);
             let r = r + t;
             let x_k =
-                (center_point.0 + (r * cos_theta_i) as i32) - center_point.0 - EYES.width as i32;
+                (center_point.0 + (r * cos_theta_i) as i64) - center_point.0 - EYES.width as i64;
             plot_point(&mut points, (x_k, y_k));
             plot(&mut buf, (x_k, y_k));
         } else {
             /* left */
             let x_k =
-                (center_point.0 + (r * cos_theta_i) as i32) - center_point.0 - EYES.width as i32;
+                (center_point.0 + (r * cos_theta_i) as i64) - center_point.0 - EYES.width as i64;
             plot_point(&mut points, (x_k, y_k));
             plot(&mut buf, (x_k, y_k));
         }
@@ -337,23 +337,23 @@ fn create_tail_image(t: f64) -> Image {
     //    static XPoint tailOffset = { 74, -15 };
     const TAIL_WIDTH: usize = 90;
     const TAIL_HEIGHT: usize = 80;
-    const TAIL_OFFSET: (i32, i32) = ((TAIL_WIDTH / 2) as i32, 0);
-    const CENTER_TAIL: [(i32, i32); 3] = [
+    const TAIL_OFFSET: (i64, i64) = ((TAIL_WIDTH / 2) as i64, 0);
+    const CENTER_TAIL: [(i64, i64); 3] = [
         /*  "Center" tail points definition */
         (0, 0),
         (3, 26),
         (10, 26),
     ];
-    let mut center_tail: Vec<(i32, i32)> = vec![(0, 0); 3]; /* center tail    */
-    let mut new_tail: Vec<(i32, i32)> = vec![(0, 0); 3]; /*  Tail at time "t"  */
+    let mut center_tail: Vec<(i64, i64)> = vec![(0, 0); 3]; /* center tail    */
+    let mut new_tail: Vec<(i64, i64)> = vec![(0, 0); 3]; /*  Tail at time "t"  */
 
     {
         /*
          *  Create an "center" tail.
          */
         center_tail[0] = (0, 0);
-        center_tail[1] = (3, (TAIL_HEIGHT - 15) as i32);
-        center_tail[2] = (20, (TAIL_HEIGHT - 15) as i32);
+        center_tail[1] = (3, (TAIL_HEIGHT - 15) as i64);
+        center_tail[2] = (20, (TAIL_HEIGHT - 15) as i64);
     }
 
     /*
@@ -374,9 +374,9 @@ fn create_tail_image(t: f64) -> Image {
      */
     for i in 0..3 {
         new_tail[i].0 = ((center_tail[i].0 as f64) * cos_theta
-            + ((center_tail[i].1 as f64) * sin_theta)) as i32;
+            + ((center_tail[i].1 as f64) * sin_theta)) as i64;
         new_tail[i].1 = ((center_tail[i].0 as f64 * -1.0) * sin_theta
-            + ((center_tail[i].1 as f64) * cos_theta)) as i32;
+            + ((center_tail[i].1 as f64) * cos_theta)) as i64;
 
         new_tail[i].0 += TAIL_OFFSET.0;
         new_tail[i].1 += TAIL_OFFSET.1;
@@ -384,9 +384,9 @@ fn create_tail_image(t: f64) -> Image {
 
     const WIDTH: f64 = 17.0;
     const WIDTH2: f64 = WIDTH / 2.0;
-    buf.plot_line_width(new_tail[0], new_tail[1], 1.0);
-    buf.plot_line_width(new_tail[1], new_tail[2], 1.0);
-    buf.plot_line_width(new_tail[2], new_tail[0], 1.0);
+    buf.plot_line_width(new_tail[0], new_tail[1], 0.0);
+    buf.plot_line_width(new_tail[1], new_tail[2], 0.0);
+    buf.plot_line_width(new_tail[2], new_tail[0], 0.0);
 
     let center = (
         (new_tail[0].0 + new_tail[1].0 + new_tail[2].0) / 3,
@@ -399,7 +399,7 @@ fn create_tail_image(t: f64) -> Image {
     let last_point = ((xa + xb) / 2, (ya + yb) / 2);
     buf.plot_ellipse(
         last_point,
-        (WIDTH2 as i32, WIDTH2 as i32),
+        (WIDTH2 as i64, WIDTH2 as i64),
         [true, true, true, true],
         1.0,
     );
@@ -417,8 +417,8 @@ fn create_tail_image_hook(t: f64) -> Image {
     let mut angle: f64;
 
     //    static XPoint tailOffset = { 74, -15 };
-    const TAIL_OFFSET: (i32, i32) = (72, 0);
-    const CENTER_TAIL: [(i32, i32); N_TAIL_PTS] = [
+    const TAIL_OFFSET: (i64, i64) = (72, 0);
+    const CENTER_TAIL: [(i64, i64); N_TAIL_PTS] = [
         /*  "Center" tail points definition */
         (0, 0),
         (0, 76),
@@ -429,8 +429,8 @@ fn create_tail_image_hook(t: f64) -> Image {
         (21, 70),
     ];
 
-    let mut off_center_tail: Vec<(i32, i32)> = vec![(0, 0); N_TAIL_PTS]; /* off center tail    */
-    let mut new_tail: Vec<(i32, i32)> = vec![(0, 0); N_TAIL_PTS]; /*  Tail at time "t"  */
+    let mut off_center_tail: Vec<(i64, i64)> = vec![(0, 0); N_TAIL_PTS]; /* off center tail    */
+    let mut new_tail: Vec<(i64, i64)> = vec![(0, 0); N_TAIL_PTS]; /*  Tail at time "t"  */
 
     {
         /*
@@ -445,10 +445,10 @@ fn create_tail_image_hook(t: f64) -> Image {
         for i in 0..N_TAIL_PTS {
             off_center_tail[i].0 = ((CENTER_TAIL[i].0 as f64) * cos_theta
                 + ((CENTER_TAIL[i].1 as f64) * sin_theta))
-                as i32;
+                as i64;
             off_center_tail[i].1 = ((-1.0 * (CENTER_TAIL[i].0 as f64)) * sin_theta
                 + ((CENTER_TAIL[i].1 as f64) * cos_theta))
-                as i32;
+                as i64;
         }
     }
 
@@ -470,9 +470,9 @@ fn create_tail_image_hook(t: f64) -> Image {
      */
     for i in 0..N_TAIL_PTS {
         new_tail[i].0 = ((off_center_tail[i].0 as f64) * cos_theta
-            + ((off_center_tail[i].1 as f64) * sin_theta)) as i32;
+            + ((off_center_tail[i].1 as f64) * sin_theta)) as i64;
         new_tail[i].1 = ((off_center_tail[i].0 as f64 * -1.0) * sin_theta
-            + ((off_center_tail[i].1 as f64) * cos_theta)) as i32;
+            + ((off_center_tail[i].1 as f64) * cos_theta)) as i64;
 
         new_tail[i].0 += TAIL_OFFSET.0;
         new_tail[i].1 += TAIL_OFFSET.1;
@@ -488,11 +488,11 @@ fn create_tail_image_hook(t: f64) -> Image {
 
     let mut last_point = *new_tail.last().unwrap();
     last_point.1 += 1;
-    for b in 0..=((0.8 * WIDTH2) as i32) {
+    for b in 0..=((0.8 * WIDTH2) as i64) {
         plot_ellipse(
             &mut buf,
             last_point,
-            (WIDTH2 as i32, b),
+            (WIDTH2 as i64, b),
             [false, false, true, true],
             1.0,
         );

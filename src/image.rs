@@ -66,10 +66,10 @@ impl Image {
     pub fn draw_outline(&mut self) {
         for i in 0..(self.height as _) {
             self.plot(0, i);
-            self.plot(self.width as i32 - 1, i);
+            self.plot(self.width as i64 - 1, i);
         }
         for i in 0..(self.width as _) {
-            self.plot(i, self.height as i32 - 1);
+            self.plot(i, self.height as i64 - 1);
             self.plot(i, 0);
         }
     }
@@ -80,13 +80,13 @@ impl Image {
         }
     }
 
-    pub fn plot(&mut self, x: i32, y: i32) {
+    pub fn plot(&mut self, x: i64, y: i64) {
         //std::dbg!((x, y));
         //std::dbg!(self.bytes.len());
         //std::dbg!(self.width);
         //std::dbg!(self.height);
         //std::dbg!(self.width * self.height);
-        if x < 0 || y < 0 || y >= (self.height as i32) || x >= (self.width as i32) {
+        if x < 0 || y < 0 || y >= (self.height as i64) || x >= (self.width as i64) {
             eprintln!("invalid plot() coors: ({}, {})", x, y);
             return;
         }
@@ -94,13 +94,13 @@ impl Image {
         self.bytes[y * self.width + x] = BLACK;
     }
 
-    pub fn get(&mut self, x: i32, y: i32) -> Option<u32> {
+    pub fn get(&mut self, x: i64, y: i64) -> Option<u32> {
         //std::dbg!((x, y));
         //std::dbg!(self.bytes.len());
         //std::dbg!(self.width);
         //std::dbg!(self.height);
         //std::dbg!(self.width * self.height);
-        if x < 0 || y < 0 || y >= (self.height as i32) || x >= (self.width as i32) {
+        if x < 0 || y < 0 || y >= (self.height as i64) || x >= (self.width as i64) {
             eprintln!("invalid plot() coors: ({}, {})", x, y);
             return None;
         }
@@ -110,8 +110,8 @@ impl Image {
 
     pub fn plot_ellipse(
         &mut self,
-        (xm, ym): (i32, i32),
-        (a, b): (i32, i32),
+        (xm, ym): (i64, i64),
+        (a, b): (i64, i64),
         quadrants: [bool; 4],
         _wd: f64,
     ) {
@@ -159,7 +159,7 @@ impl Image {
         }
     }
 
-    pub fn plot_line_width(&mut self, (mut x0, mut y0): (i32, i32), (x1, y1): (i32, i32), wd: f64) {
+    pub fn plot_line_width(&mut self, (mut x0, mut y0): (i64, i64), (x1, y1): (i64, i64), wd: f64) {
         //eprintln!(
         //    "plot_line_width: ({}, {}), ({}, {}) width = {}",
         //    x0, y0, x1, y1, wd
@@ -171,9 +171,9 @@ impl Image {
         let sy = if y0 < y1 { 1 } else { -1 };
         let mut err = dx - dy;
         /* error value e_xy */
-        let mut e2: i32;
-        let mut x2: i32;
-        let mut y2: i32;
+        let mut e2: i64;
+        let mut x2: i64;
+        let mut y2: i64;
         let ed: f64 = if (dx + dy) == 0 {
             1.0
         } else {
@@ -192,7 +192,7 @@ impl Image {
                 //eprintln!(" x step ");
                 e2 += dy;
                 y2 = y0;
-                while e2 < ((ed as f64 * wd) as i32) && (y1 != y2 || dx > dy) {
+                while e2 < ((ed as f64 * wd) as i64) && (y1 != y2 || dx > dy) {
                     y2 += sy;
                     self.plot(x0, y2);
                     points.push((x0, y2));
@@ -209,7 +209,7 @@ impl Image {
                 /* y step */
                 //eprintln!(" y step ");
                 e2 = dx - e2;
-                while e2 < ((ed as f64 * wd) as i32) && (x1 != x2 || dx < dy) {
+                while e2 < ((ed as f64 * wd) as i64) && (x1 != x2 || dx < dy) {
                     x2 += sx;
                     self.plot(x2, y0);
                     points.push((x2, y0));
@@ -224,13 +224,13 @@ impl Image {
         }
     }
 
-    pub fn flood_fill(&mut self, x: i32, y: i32) {
+    pub fn flood_fill(&mut self, x: i64, y: i64) {
         if self.get(x, y) != Some(WHITE) {
             return;
         }
 
-        let w = (self.width as i32);
-        let h = (self.height as i32);
+        let w = (self.width as i64);
+        let h = (self.height as i64);
         let mut span_above: bool;
         let mut span_below: bool;
 
