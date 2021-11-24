@@ -178,7 +178,7 @@ pub fn draw_second(
         let y0 = center_point.1 - (length * cos_angle) as i64;
         let x1 = center_point.0 + (ms - wc) as i64;
         let y1 = center_point.1 - (mc + ws) as i64;
-        buffer.plot_line_width((x0, y0), (x1, y1), 0.0);
+        buffer.plot_line_width((x0, y0), (x1, y1), 1.0);
         //eprintln!("1-2: 0: {:?} 1: {:?}", (x0, y0), (x1, y1));
     }
     /* 2-----3 */
@@ -187,7 +187,7 @@ pub fn draw_second(
         let y0 = center_point.1 - (mc + ws) as i64;
         let x1 = center_point.0 + (offset * sin_angle) as i64;
         let y1 = center_point.1 - (offset * cos_angle) as i64;
-        buffer.plot_line_width((x0, y0), (x1, y1), 0.0);
+        buffer.plot_line_width((x0, y0), (x1, y1), 1.0);
         //eprintln!("2-3: 0: {:?} 1: {:?}", (x0, y0), (x1, y1));
     }
     /* 3-----4 */
@@ -196,7 +196,7 @@ pub fn draw_second(
         let y0 = center_point.1 - (offset * cos_angle) as i64;
         let x1 = center_point.0 + (ms + wc) as i64;
         let y1 = center_point.1 - (mc - ws) as i64;
-        buffer.plot_line_width((x0, y0), (x1, y1), 0.0);
+        buffer.plot_line_width((x0, y0), (x1, y1), 1.0);
         //eprintln!("3-4: 0: {:?} 1: {:?}", (x0, y0), (x1, y1));
     }
     /* 4-----1 */
@@ -205,7 +205,7 @@ pub fn draw_second(
         let y0 = center_point.1 - (mc - ws) as i64;
         let x1 = center_point.0 + (length * sin_angle) as i64;
         let y1 = center_point.1 - (length * cos_angle) as i64;
-        buffer.plot_line_width((x0, y0), (x1, y1), 0.0);
+        buffer.plot_line_width((x0, y0), (x1, y1), 1.0);
         //eprintln!("4-1: 0: {:?} 1: {:?}", (x0, y0), (x1, y1));
     }
 }

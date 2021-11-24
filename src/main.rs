@@ -502,9 +502,17 @@ fn create_tail_image_hook(t: f64) -> Image {
 }
 
 fn main() {
+    let time = unsafe { libc::time(std::ptr::null_mut()) };
+    let mut tm = std::mem::MaybeUninit::<libc::tm>::uninit();
+    unsafe {
+        libc::localtime_r(&time as *const _, tm.as_mut_ptr());
+    }
+    let tm = unsafe { tm.assume_init() };
     let args = std::env::args().skip(1).collect::<Vec<String>>();
 
     let mut tail_kind: fn(_) -> _ = create_tail_image;
+    let mut crazy: usize = 0;
+    crazy = args.iter().filter(|s| *s == "--crazy").count();
     if !args.is_empty() && args.iter().any(|s| s == "--hook") {
         tail_kind = create_tail_image_hook;
     }
@@ -581,6 +589,16 @@ fn main() {
         x_offset: hands::FACE_OFFSET_X,
         y_offset: hands::FACE_OFFSET_Y,
     };
+
+    const SECOND_HAND_WIDTH: i64 = 23;
+    const SECOND_HAND_HEIGHT: i64 = 1;
+
+    const MINUTE_HAND_WIDTH: i64 = 22;
+    const MINUTE_HAND_HEIGHT: i64 = 3;
+
+    const HOUR_HAND_WIDTH: i64 = 16;
+    const HOUR_HAND_HEIGHT: i64 = 2;
+
     let mut i: usize = 0;
     let mut prev_i = i;
     let mut up = true;
@@ -588,9 +606,33 @@ fn main() {
     let mut now_second = Instant::now();
     let mut seconds;
     let _now = SystemTime::now();
-    let hour: u8 = 16;
-    let mut minutes: u8 = 0;
-    let mut passed_seconds = 60;
+    let mut hour: u8 = tm.tm_hour as _;
+    let mut minutes: u8 = tm.tm_min as _;
+    let mut passed_seconds = tm.tm_sec as _;
+    hands::draw_second(
+        &mut hour_hand,
+        HOUR_HAND_WIDTH,
+        HOUR_HAND_HEIGHT,
+        -5,
+        (hour as f64) / 12.0,
+    );
+    hour_hand.draw(&mut buffer, BLACK, None);
+    hands::draw_second(
+        &mut second_hand,
+        SECOND_HAND_WIDTH,
+        SECOND_HAND_HEIGHT,
+        -5,
+        (passed_seconds as f64) / 60.0,
+    );
+    second_hand.draw(&mut buffer, BLACK, None);
+    hands::draw_second(
+        &mut minute_hand,
+        MINUTE_HAND_WIDTH,
+        MINUTE_HAND_HEIGHT,
+        -5,
+        (minutes as f64) / 60.0,
+    );
+    minute_hand.draw(&mut buffer, BLACK, None);
     while window.is_open() && !window.is_key_down(Key::Escape) && !window.is_key_down(Key::Q) {
         let cur_tail = &tails_frames[i];
         tail.draw(&mut buffer, BLACK, Some(WHITE));
@@ -602,7 +644,7 @@ fn main() {
 
         let new_now_second = Instant::now();
 
-        if new_now_second - now_second >= Duration::from_secs(1) {
+        if crazy > 0 || new_now_second - now_second >= Duration::from_secs(1) {
             passed_seconds += 1;
             now_second = new_now_second;
             system_now_second = SystemTime::now();
@@ -613,38 +655,82 @@ fn main() {
             //blank_face.draw(&mut buffer, WHITE, Some(WHITE));
             second_hand.draw(&mut buffer, WHITE, None);
             second_hand.clear();
-            hands::draw_second(&mut second_hand, 23, 1, -5, (seconds as f64) / 60.0);
+            if crazy > 0 {
+                passed_seconds += 6 * (crazy as u64);
+                seconds = passed_seconds;
+            }
+            hands::draw_second(
+                &mut second_hand,
+                SECOND_HAND_WIDTH,
+                SECOND_HAND_HEIGHT,
+                -5,
+                (seconds as f64) / 60.0,
+            );
             second_hand.draw(&mut buffer, BLACK, None);
         }
-        if passed_seconds >= 60 {
+        if crazy > 0 || passed_seconds >= 60 {
             passed_seconds = 0;
             minutes += 1;
             if minutes == 60 {
                 minutes = 0;
+                hour += 1;
+                if hour == 24 {
+                    hour = 0;
+                }
             }
             minute_hand.draw(&mut buffer, WHITE, None);
             minute_hand.clear();
-            hands::draw_second(&mut minute_hand, 29, 3, -5, (minutes as f64) / 60.0);
+            hands::draw_second(
+                &mut minute_hand,
+                MINUTE_HAND_WIDTH,
+                MINUTE_HAND_HEIGHT,
+                -5,
+                (minutes as f64) / 60.0,
+            );
         }
         minute_hand.draw(&mut buffer, BLACK, None);
         //blank_face.draw(&mut buffer, WHITE, Some(WHITE));
         hour_hand.draw(&mut buffer, WHITE, None);
         hour_hand.clear();
-        hands::draw_second(&mut hour_hand, 18, 4, -5, (hour as f64) / 12.0);
+        hands::draw_second(
+            &mut hour_hand,
+            HOUR_HAND_WIDTH,
+            HOUR_HAND_HEIGHT,
+            -5,
+            (hour as f64) / 12.0,
+        );
         hour_hand.draw(&mut buffer, BLACK, None);
         //}
 
-        if up {
-            if i + 1 == tails_frames.len() {
-                up = false;
-            } else {
-                i = (i + 1).wrapping_rem(tails_frames.len());
+        if crazy > 0 {
+            for _ in i..(crazy + i) {
+                if up {
+                    if i + 1 == tails_frames.len() {
+                        up = false;
+                    } else {
+                        i = (i + 1).wrapping_rem(tails_frames.len());
+                    }
+                } else {
+                    if i == 0 {
+                        up = true;
+                    } else {
+                        i -= 1;
+                    }
+                }
             }
         } else {
-            if i == 0 {
-                up = true;
+            if up {
+                if i + 1 == tails_frames.len() {
+                    up = false;
+                } else {
+                    i = (i + 1).wrapping_rem(tails_frames.len());
+                }
             } else {
-                i -= 1;
+                if i == 0 {
+                    up = true;
+                } else {
+                    i -= 1;
+                }
             }
         }
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way

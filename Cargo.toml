@@ -9,3 +9,4 @@ license = "GPL-3.0-or-later"
 
 [dependencies]
 minifb = "0.19.1"
+libc = "0.2"
