@@ -501,6 +501,19 @@ fn create_tail_image_hook(t: f64) -> Image {
     Image::from(Bitmap { bits: &ret, ..TAIL })
 }
 
+const HELP: &str = r#"Usage: kitkat [--hook|--crazy|--offset OFFSET]
+
+Displays a kit kat clock with the system time, or the system time with given offset if the --offset
+argument is provided.
+
+      --hook                 show a hooked tail instead of the default drop shaped one
+      --crazy                go faster for each time this argument is invoked
+      --offset OFFSET        add OFFSET to current system time (only the first given
+                             offset will be used)
+
+      OFFSET format is [+-]{0,1}\d\d:\d\d, e.g: 02:00 or -03:45 or +00:00
+"#;
+
 fn main() {
     let time = unsafe { libc::time(std::ptr::null_mut()) };
     let mut tm = std::mem::MaybeUninit::<libc::tm>::uninit();
@@ -509,6 +522,15 @@ fn main() {
     }
     let tm = unsafe { tm.assume_init() };
     let args = std::env::args().skip(1).collect::<Vec<String>>();
+    if !args.is_empty() && args.iter().any(|s| s == "--help") {
+        if args.iter().any(|s| s != "--help") {
+            eprintln!(
+                "WARNING: Ignoring other arguments and startup because --help was specified."
+            );
+        }
+        println!("{}", HELP);
+        return;
+    }
 
     let mut tail_kind: fn(_) -> _ = create_tail_image;
     let mut crazy: usize = 0;
