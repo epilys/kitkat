@@ -516,6 +516,47 @@ fn main() {
     if !args.is_empty() && args.iter().any(|s| s == "--hook") {
         tail_kind = create_tail_image_hook;
     }
+    let mut offset_sign = true;
+    let mut offset_hour = 0;
+    let mut offset_min = 0;
+    if let Some(pos) = args.iter().position(|s| s == "--offset") {
+        if let Some(offset) = args.iter().nth(pos + 1) {
+            let mut offset = offset.as_str();
+            if offset.starts_with("+") {
+                offset = &offset[1..];
+            } else if offset.starts_with("-") {
+                offset_sign = false;
+                offset = &offset[1..];
+            }
+
+            if offset.len() != "00:00".len()
+                || offset.as_bytes()[2] != b':'
+                || !offset.as_bytes()[0..2]
+                    .iter()
+                    .chain(offset.as_bytes()[3..].iter())
+                    .all(|b| b.is_ascii_digit())
+            {
+                eprintln!("Wrong format for time offset, must be [+-]{{0,1}}\\d\\d:\\d\\d, e.g. 02:00 or -03:45 or +00:00");
+                return;
+            }
+            offset_hour = offset[0..2].parse::<usize>().unwrap();
+            offset_min = offset[3..].parse::<usize>().unwrap();
+            if offset_min >= 60 {
+                eprintln!("Wrong format for time offset, minute must be < 60");
+                return;
+            }
+            if offset_hour >= u8::MAX as usize {
+                eprintln!(
+                    "Wrong format for time offset, hour must be a reasonable value, i.e. < {}",
+                    u8::MAX
+                );
+                return;
+            }
+        } else {
+            eprintln!("--offset requires a value with a certain format: [+-]{{0,1}}\\d\\d:\\d\\d");
+            return;
+        }
+    }
     let mut buffer: Vec<u32> = vec![WHITE; CAT_WIDTH * CAT_HEIGHT];
     let mut tails_frames: Vec<Image> = Vec::with_capacity(NUM_TAILS);
     let mut eyes_frames: Vec<Image> = Vec::with_capacity(NUM_TAILS);
@@ -608,6 +649,13 @@ fn main() {
     let _now = SystemTime::now();
     let mut hour: u8 = tm.tm_hour as _;
     let mut minutes: u8 = tm.tm_min as _;
+    add_time_offset(
+        &mut hour,
+        &mut minutes,
+        offset_sign,
+        offset_hour,
+        offset_min,
+    );
     let mut passed_seconds = tm.tm_sec as _;
     hands::draw_second(
         &mut hour_hand,
@@ -742,4 +790,85 @@ fn main() {
 
         std::thread::sleep(millis);
     }
+}
+
+fn add_time_offset(
+    hour: &mut u8,
+    minutes: &mut u8,
+    offset_sign: bool,
+    offset_hour: usize,
+    offset_min: usize,
+) {
+    match (offset_sign, (offset_hour, offset_min)) {
+        (false, (h, m)) if h > 0 || m > 0 => {
+            let mut ih = *hour as i64;
+            ih -= h as i64;
+            let mut im = *minutes as i64;
+            im -= m as i64;
+            if im < 0 {
+                ih -= if (im.abs() % 59) > 0 { 1 } else { 0 };
+                ih %= 23;
+            }
+            if im < 0 {
+                *minutes = (60 + im) as u8;
+            } else {
+                *minutes = im as u8;
+            }
+            if ih < 0 {
+                *hour = (24 + ih) as u8;
+            } else {
+                *hour = ih as u8;
+            }
+        }
+        (true, (h, m)) if h > 0 || m > 0 => {
+            *hour += h as u8;
+            *hour %= 24;
+            *minutes += m as u8;
+            if *minutes >= 60 {
+                *hour += *minutes / 60;
+                *hour %= 24;
+            }
+            *minutes %= 60;
+        }
+        _ => {}
+    }
+}
+
+#[test]
+fn test_time_offset() {
+    let mut hour: u8 = 14;
+    let mut minutes: u8 = 32;
+
+    add_time_offset(&mut hour, &mut minutes, true, 0, 0);
+    assert_eq!((hour, minutes), (14, 32));
+
+    add_time_offset(&mut hour, &mut minutes, false, 0, 0);
+    assert_eq!((hour, minutes), (14, 32));
+
+    add_time_offset(&mut hour, &mut minutes, true, 2, 0);
+    assert_eq!((hour, minutes), (16, 32));
+
+    hour = 14;
+    minutes = 32;
+
+    add_time_offset(&mut hour, &mut minutes, true, 2, 32);
+    assert_eq!((hour, minutes), (17, 04));
+
+    hour = 14;
+    minutes = 32;
+
+    add_time_offset(&mut hour, &mut minutes, false, 2, 0);
+    assert_eq!((hour, minutes), (12, 32));
+
+    hour = 14;
+    minutes = 32;
+
+    add_time_offset(&mut hour, &mut minutes, false, 2, 33);
+    assert_eq!((hour, minutes), (11, 59));
+
+    hour = 14;
+    minutes = 32;
+
+    add_time_offset(&mut hour, &mut minutes, true, 24, 59);
+    assert_eq!((hour, minutes), (15, 31));
 }
