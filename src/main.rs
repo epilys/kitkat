@@ -501,7 +501,7 @@ fn create_tail_image_hook(t: f64) -> Image {
     Image::from(Bitmap { bits: &ret, ..TAIL })
 }
 
-const HELP: &str = r#"Usage: kitkat [--hook|--crazy|--offset OFFSET]
+const HELP: &str = r#"Usage: kitkat [--hook|--crazy|--offset OFFSET|--borderless|--resize]
 
 Displays a kit kat clock with the system time, or the system time with given offset if the --offset
 argument is provided.
@@ -510,6 +510,8 @@ argument is provided.
       --crazy                go faster for each time this argument is invoked
       --offset OFFSET        add OFFSET to current system time (only the first given
                              offset will be used)
+      --borderless
+      --resize
 
       OFFSET format is [+-]{0,1}\d\d:\d\d, e.g: 02:00 or -03:45 or +00:00
 "#;
@@ -531,6 +533,9 @@ fn main() {
         println!("{}", HELP);
         return;
     }
+
+    let borderless = !args.is_empty() && args.iter().any(|s| s == "--borderless");
+    let resize = !args.is_empty() && args.iter().any(|s| s == "--resize");
 
     let mut tail_kind: fn(_) -> _ = create_tail_image;
     let mut crazy: usize = 0;
@@ -589,14 +594,14 @@ fn main() {
     }
 
     let mut window = Window::new(
-        "Test - ESC to exit",
+        "kitkat - ESC or q to exit",
         CAT_WIDTH,
         CAT_HEIGHT,
         WindowOptions {
             title: true,
-            //borderless: true,
-            //resize: false,
-            //transparency: true,
+            borderless,
+            resize,
+            transparency: false,
             ..WindowOptions::default()
         },
     )
