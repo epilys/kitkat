@@ -229,8 +229,8 @@ impl Image {
             return;
         }
 
-        let w = (self.width as i64);
-        let h = (self.height as i64);
+        let w = self.width as i64;
+        let h = self.height as i64;
         let mut span_above: bool;
         let mut span_below: bool;
 

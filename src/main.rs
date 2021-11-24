@@ -35,7 +35,7 @@ pub const fn from_u8_rgb(r: u8, g: u8, b: u8) -> u32 {
     (r << 16) | (g << 8) | b
 }
 pub(crate) const AZURE_BLUE: u32 = from_u8_rgb(0, 127, 255);
-pub(crate) const RED: u32 = from_u8_rgb(157, 37, 10);
+pub(crate) const _RED: u32 = from_u8_rgb(157, 37, 10);
 pub(crate) const WHITE: u32 = from_u8_rgb(255, 255, 255);
 pub(crate) const BLACK: u32 = 0;
 
@@ -241,109 +241,19 @@ fn create_eye_pixmap(t: f64) -> Image {
     ret
 }
 
-fn create_eye_pixmap2(t: f64) -> Vec<u8> {
-    let mut ret = EYES.bits.to_vec();
-    let mut buf = Buffer {
-        vec: &mut ret,
-        row_width: EYES.width,
-        height: EYES.height,
-    };
-    let mut points: Vec<Vec<bool>> = vec![vec![false; EYES.width + 1]; EYES.height + 1];
-    let top_point: (i64, i64) = ((EYES.width / 2) as i64, 0);
-    let bottom_point: (i64, i64) = ((EYES.width / 2) as i64, EYES.height as i64);
-
-    let center_point = (((3 * EYES.width) / 2) as i64, (EYES.height / 2) as i64);
-    //println!("center_point: {:?}", center_point);
-
-    let plot_point = move |points: &mut Vec<Vec<bool>>, point| {
-        //eprintln!("plot_point: {:?}", point);
-        let (x, y) = point;
-        if y as usize >= points.len() || x as usize >= points[y as usize].len() {
-            return;
-        }
-        points[y as usize][x as usize] = true;
-    };
-
-    //plot(&mut buf, top_point);
-    plot_point(&mut points, top_point);
-    plot_point(&mut points, bottom_point);
-
-    let W64 = EYES.width as f64 - 3. * t;
-    let H64 = EYES.height as f64;
-    let H64_2 = H64 / 2.0;
-
-    let mut cos_theta_i; //= f64::cos(FRAC_PI_2 + std::dbg!(f64::acos((W64/r))));
-    let mut sin_theta_i; //= f64::sin(FRAC_PI_2 + f64::acos((W64/r)));
-
-    let r: f64 = f64::sqrt(W64.powi(2) + (H64_2).powi(2));
-    //std::dbg!(H64_2);
-    //std::dbg!(r);
-    //std::dbg!(H64_2 / r);
-    //let mut theta_i = -1.*(FRAC_PI_2 + f64::acos(H64_2/r));
-    //   println!("theta_i: {:?}", theta_i);
-
-    for y_k in top_point.1..=bottom_point.1 {
-        sin_theta_i = (y_k - center_point.1) as f64 / r;
-        cos_theta_i = f64::sqrt(1. - sin_theta_i.powi(2));
-
-        if t >= 1.0 {
-            /* right */
-            let x_k = center_point.0 + center_point.0 / 2
-                - ((center_point.0 + (r * cos_theta_i) as i64)
-                    - center_point.0
-                    - EYES.width as i64);
-            plot_point(&mut points, (x_k, y_k));
-            plot(&mut buf, (x_k, y_k));
-
-            /* left */
-            /* increase left r */
-            let _offset = t * (EYES.width as f64);
-            let r = r + t;
-            let x_k =
-                (center_point.0 + (r * cos_theta_i) as i64) - center_point.0 - EYES.width as i64;
-            plot_point(&mut points, (x_k, y_k));
-            plot(&mut buf, (x_k, y_k));
-        } else {
-            /* left */
-            let x_k =
-                (center_point.0 + (r * cos_theta_i) as i64) - center_point.0 - EYES.width as i64;
-            plot_point(&mut points, (x_k, y_k));
-            plot(&mut buf, (x_k, y_k));
-        }
-    }
-    //eprintln!("got points:");
-    //for row in points {
-    //    for p in row {
-    //        print!("{}", if p { "❖" } else { "." });
-    //    }
-    //    println!("");
-    //}
-    //for b in buf.iter_mut() {
-    //    *b = 0b10101010;
-    //}
-
-    ret
-}
-
 fn create_tail_image(t: f64) -> Image {
     /*  Pendulum parameters */
-    let mut sin_theta: f64;
-    let mut cos_theta: f64;
+    let sin_theta: f64;
+    let cos_theta: f64;
     const A: f64 = 0.4;
     let omega: f64 = 1.0;
     let phi: f64 = 3.0 * FRAC_PI_2;
-    let mut angle: f64;
+    let angle: f64;
 
     //    static XPoint tailOffset = { 74, -15 };
     const TAIL_WIDTH: usize = 90;
     const TAIL_HEIGHT: usize = 80;
     const TAIL_OFFSET: (i64, i64) = ((TAIL_WIDTH / 2) as i64, 0);
-    const CENTER_TAIL: [(i64, i64); 3] = [
-        /*  "Center" tail points definition */
-        (0, 0),
-        (3, 26),
-        (10, 26),
-    ];
     let mut center_tail: Vec<(i64, i64)> = vec![(0, 0); 3]; /* center tail    */
     let mut new_tail: Vec<(i64, i64)> = vec![(0, 0); 3]; /*  Tail at time "t"  */
 
@@ -538,8 +448,7 @@ fn main() {
     let resize = !args.is_empty() && args.iter().any(|s| s == "--resize");
 
     let mut tail_kind: fn(_) -> _ = create_tail_image;
-    let mut crazy: usize = 0;
-    crazy = args.iter().filter(|s| *s == "--crazy").count();
+    let crazy: usize = args.iter().filter(|s| *s == "--crazy").count();
     if !args.is_empty() && args.iter().any(|s| s == "--hook") {
         tail_kind = create_tail_image_hook;
     }
