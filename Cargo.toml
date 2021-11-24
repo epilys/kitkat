@@ -1,9 +1,14 @@
 [package]
-name = "kit-kat"
-version = "0.1.0"
+name = "kitkat"
+version = "1.0.0"
 authors = ["Manos Pitsidianakis <el13635@mail.ntua.gr>"]
-edition = "2018"
+edition = "2021"
 license = "GPL-3.0-or-later"
+readme = "README.md"
+repository = "https://github.com/epilys/kitkat"
+categories = ["games", ]
+description = "The classic kit kat clock utility."
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

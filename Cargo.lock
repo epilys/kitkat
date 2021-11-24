@@ -65,8 +65,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "kit-kat"
-version = "0.1.0"
+name = "kitkat"
+version = "1.0.0"
 dependencies = [
  "libc",
  "minifb",

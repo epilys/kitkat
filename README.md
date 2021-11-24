@@ -21,9 +21,25 @@ argument is provided.
 
 ## Demo
 
+<table>
+<tr>
+<td>
+
 ![demo](./kitkat-round.gif?raw=true)
 
+</td>
+<td>
+
 ![demo](./kitkat-hook.gif?raw=true)
+
+</td>
+<td>
+
+![demo](./kitkat-resized.jpg?raw=true)
+
+</td>
+</tr>
+</table>
 
 ## References
 
