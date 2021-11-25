@@ -1,0 +1,4 @@
+const _6_WIDTH: usize =  5;
+const _6_HEIGHT: usize = 7;
+const _6_BITS: &[u8] = &[
+   0x1e, 0x01, 0x01, 0x0f, 0x11, 0x11, 0x0e ];

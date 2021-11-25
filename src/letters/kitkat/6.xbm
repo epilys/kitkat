@@ -1,0 +1,4 @@
+#define _6_width 5
+#define _6_height 7
+static unsigned char _6_bits[] = {
+   0x1e, 0x01, 0x01, 0x0f, 0x11, 0x11, 0x0e };

@@ -1,0 +1,4 @@
+#define _7_width 6
+#define _7_height 7
+static unsigned char _7_bits[] = {
+   0x3f, 0x10, 0x08, 0x04, 0x04, 0x04, 0x04 };

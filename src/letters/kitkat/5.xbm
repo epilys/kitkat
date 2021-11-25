@@ -1,0 +1,4 @@
+#define _5_width 5
+#define _5_height 7
+static unsigned char _5_bits[] = {
+   0x1f, 0x01, 0x0f, 0x18, 0x11, 0x11, 0x0e };

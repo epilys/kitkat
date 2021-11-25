@@ -21,27 +21,28 @@
 
 use super::*;
 
-const DATE_WIDTH: usize = 18;
+const DATE_WIDTH: usize = 10;
 
-include!("letters/0.xbm.rs");
-include!("letters/1.xbm.rs");
-include!("letters/2.xbm.rs");
-include!("letters/3.xbm.rs");
-include!("letters/4.xbm.rs");
-include!("letters/5.xbm.rs");
-include!("letters/6.xbm.rs");
-include!("letters/7.xbm.rs");
-include!("letters/8.xbm.rs");
-include!("letters/9.xbm.rs");
+include!("letters/kitkat/0.xbm.rs");
+include!("letters/kitkat/1.xbm.rs");
+include!("letters/kitkat/2.xbm.rs");
+include!("letters/kitkat/3.xbm.rs");
+include!("letters/kitkat/4.xbm.rs");
+include!("letters/kitkat/5.xbm.rs");
+include!("letters/kitkat/6.xbm.rs");
+include!("letters/kitkat/7.xbm.rs");
+include!("letters/kitkat/8.xbm.rs");
+include!("letters/kitkat/9.xbm.rs");
 
 pub fn make_date(mday: i64) -> Image {
     let mut ret = Image::new(
-        DATE_WIDTH,
-        DATE_WIDTH,
-        CAT_WIDTH / 2 - DATE_WIDTH / 2,
-        TAIL.y_offset - 3 * DATE_WIDTH,
+        DATE_WIDTH + 2,
+        DATE_WIDTH + 2,
+        CAT_WIDTH / 2 - DATE_WIDTH / 2 + 1,
+        TAIL.y_offset - 4 * DATE_WIDTH,
     );
 
+    ret.draw_outline();
     if mday < 31 {
         let mday = mday.to_string();
         let first_digit: Option<Image> = if mday.len() == 1 {
@@ -54,7 +55,7 @@ pub fn make_date(mday: i64) -> Image {
                         width: 0,
                         height: 0,
                         y_offset: 0,
-                        x_offset: 0,
+                        x_offset: 1,
                     };
                     first_digit.bytes = bits_to_bytes(_1_BITS, _1_WIDTH);
                     first_digit.width = _1_WIDTH;
@@ -67,7 +68,7 @@ pub fn make_date(mday: i64) -> Image {
                         width: 0,
                         height: 0,
                         y_offset: 0,
-                        x_offset: 0,
+                        x_offset: 1,
                     };
                     first_digit.bytes = bits_to_bytes(_2_BITS, _2_WIDTH);
                     first_digit.width = _2_WIDTH;
@@ -153,10 +154,10 @@ pub fn make_date(mday: i64) -> Image {
         };
 
         if let Some(ref first_digit) = first_digit {
-            ret.copy(&first_digit, 0, 0);
-            ret.copy(&second_digit, DATE_WIDTH / 2, 0);
+            ret.copy(&first_digit, 1, 2);
+            ret.copy(&second_digit, DATE_WIDTH / 2 + 1, 2);
         } else {
-            ret.copy(&second_digit, DATE_WIDTH / 2, 0);
+            ret.copy(&second_digit, DATE_WIDTH / 2 + 1, 2);
         }
     }
 
