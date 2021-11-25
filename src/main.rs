@@ -29,6 +29,7 @@ pub use image::*;
 mod draw;
 pub use draw::*;
 mod hands;
+mod moonphase;
 
 pub const fn from_u8_rgb(r: u8, g: u8, b: u8) -> u32 {
     let (r, g, b) = (r as u32, g as u32, b as u32);
@@ -37,6 +38,10 @@ pub const fn from_u8_rgb(r: u8, g: u8, b: u8) -> u32 {
 pub(crate) const AZURE_BLUE: u32 = from_u8_rgb(0, 127, 255);
 pub(crate) const _RED: u32 = from_u8_rgb(157, 37, 10);
 pub(crate) const WHITE: u32 = from_u8_rgb(255, 255, 255);
+pub(crate) const MOON: u32 = from_u8_rgb(0xd4, 0xc6, 0xa8);
+pub(crate) const MOONDARK: u32 = from_u8_rgb(0x59, 0x53, 0x45);
+pub(crate) const SUN: u32 = from_u8_rgb(0xff, 0xeb, 0x3b);
+pub(crate) const SUNDARK: u32 = from_u8_rgb(0xff, 0xa3, 0x01);
 pub(crate) const BLACK: u32 = 0;
 
 #[derive(Clone, Copy)]
@@ -411,7 +416,7 @@ fn create_tail_image_hook(t: f64) -> Image {
     Image::from(Bitmap { bits: &ret, ..TAIL })
 }
 
-const HELP: &str = r#"Usage: kitkat [--hook|--crazy|--offset OFFSET|--borderless|--resize]
+const HELP: &str = r#"Usage: kitkat [--hook|--crazy|--offset OFFSET|--borderless|--resize|--sunmoon|--moon]
 
 Displays a kit kat clock with the system time, or the system time with given offset if the --offset
 argument is provided.
@@ -422,6 +427,8 @@ argument is provided.
                              offset will be used)
       --borderless
       --resize
+      --sunmoon              show sun or moon phase depending on the hour
+      --moon                 show only moon phase
 
       OFFSET format is [+-]{0,1}\d\d:\d\d, e.g: 02:00 or -03:45 or +00:00
 "#;
@@ -446,6 +453,12 @@ fn main() {
 
     let borderless = !args.is_empty() && args.iter().any(|s| s == "--borderless");
     let resize = !args.is_empty() && args.iter().any(|s| s == "--resize");
+    let sunmoon = !args.is_empty() && args.iter().any(|s| s == "--sunmoon");
+    let moon = !args.is_empty() && args.iter().any(|s| s == "--moon");
+    if sunmoon && moon {
+        eprintln!("ERROR: You can't use both --sunmoon and --moon.");
+        return;
+    }
 
     let mut tail_kind: fn(_) -> _ = create_tail_image;
     let crazy: usize = args.iter().filter(|s| *s == "--crazy").count();
@@ -617,6 +630,14 @@ fn main() {
         (minutes as f64) / 60.0,
     );
     minute_hand.draw(&mut buffer, BLACK, None);
+
+    let sun: Image = moonphase::sun();
+    let sun_bg: Image = moonphase::sun_background();
+
+    let moon_corners: Image = moonphase::corner_fill();
+    let full_moon: Image = moonphase::MoonPosition::FullMoon.into();
+    let moon_phase: Image = moonphase::phase(moonphase::position(None)).into();
+
     while window.is_open() && !window.is_key_down(Key::Escape) && !window.is_key_down(Key::Q) {
         let cur_tail = &tails_frames[i];
         tail.draw(&mut buffer, BLACK, Some(WHITE));
@@ -684,7 +705,19 @@ fn main() {
             (hour as f64) / 12.0,
         );
         hour_hand.draw(&mut buffer, BLACK, None);
-        //}
+
+        if moon || sunmoon {
+            // FIXME: use the https://en.wikipedia.org/wiki/Sunrise_equation to calc sunrise times
+            // by having user provide latitude
+            if moon || hour < 8 || hour > 18 {
+                moon_corners.draw(&mut buffer, BLACK, Some(WHITE));
+                full_moon.draw(&mut buffer, MOONDARK, None);
+                moon_phase.draw(&mut buffer, MOON, None);
+            } else if sunmoon {
+                sun_bg.draw(&mut buffer, SUNDARK, None);
+                sun.draw(&mut buffer, SUN, None);
+            }
+        }
 
         if crazy > 0 {
             for _ in i..(crazy + i) {
