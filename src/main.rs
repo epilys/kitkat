@@ -274,10 +274,6 @@ fn dog_tail(t: f64) -> Image {
     let phi: f64 = 3.0 * FRAC_PI_2;
     let angle: f64;
 
-    //    static XPoint tailOffset = { 74, -15 };
-    const TAIL_WIDTH: usize = OCTAVETAIL_WIDTH;
-    const TAIL_HEIGHT: usize = OCTAVETAIL_HEIGHT;
-
     /*
      *  Compute pendulum function.
      */
@@ -286,8 +282,8 @@ fn dog_tail(t: f64) -> Image {
     c = f64::cos(angle);
 
     let mut buf = Image::new(
-        TAIL_WIDTH,
-        TAIL_HEIGHT,
+        OCTAVETAIL_WIDTH,
+        OCTAVETAIL_HEIGHT,
         OCTAVETAIL.x_offset,
         OCTAVETAIL.y_offset,
     );
@@ -295,7 +291,7 @@ fn dog_tail(t: f64) -> Image {
      *  Rotate the center tail about its origin by "angle" degrees.
      */
     let t = bits_to_bytes(OCTAVETAIL_BITS, OCTAVETAIL_WIDTH);
-    let center_point = ((OCTAVETAIL_WIDTH / 2) as i64, 0);
+    let center_point = (40, 0);
     for y in 0..OCTAVETAIL_HEIGHT {
         for x in 0..OCTAVETAIL_WIDTH {
             if t[y * OCTAVETAIL_WIDTH + x] == BLACK {
@@ -623,7 +619,7 @@ fn main() {
     } else {
         Image::from(TAIL)
     };
-    tail.draw(&mut buffer, WHITE, Some(WHITE));
+    tail.draw(&mut buffer, WHITE, None);
     let eyes = Image::from(EYES);
     eyes.draw(&mut buffer, BLACK, None);
 
@@ -724,7 +720,7 @@ fn main() {
 
     while window.is_open() && !window.is_key_down(Key::Escape) && !window.is_key_down(Key::Q) {
         let cur_tail = &tails_frames[i];
-        tail.draw(&mut buffer, WHITE, Some(WHITE));
+        tails_frames[prev_i].draw(&mut buffer, WHITE, None);
         cur_tail.draw(&mut buffer, BLACK, None);
         let cur_eyes = &eyes_frames[i];
         eyes_frames[prev_i].draw(&mut buffer, WHITE, None);

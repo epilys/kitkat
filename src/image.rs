@@ -114,9 +114,6 @@ impl Image {
         //std::dbg!(self.height);
         //std::dbg!(self.width * self.height);
         if x < 0 || y < 0 || y >= (self.height as i64) || x >= (self.width as i64) {
-            if cfg!(debug_assertions) {
-                eprintln!("invalid plot() coors: ({}, {})", x, y);
-            }
             return None;
         }
         let (x, y): (usize, usize) = (x as _, y as _);
