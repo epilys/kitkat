@@ -18,6 +18,7 @@ argument is provided.
       --sunmoon              show sun or moon phase depending on the hour
       --moon                 show only moon phase
       --date                 show month date
+      --dog                  show an italian greyhound named Gaius Octavius Maximus instead of a cat
 
       OFFSET format is [+-]{0,1}\d\d:\d\d, e.g: 02:00 or -03:45 or +00:00
 ```

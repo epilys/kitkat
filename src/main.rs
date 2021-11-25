@@ -154,11 +154,29 @@ const TAIL: Bitmap<'static> = Bitmap {
     y_offset: TAIL_OFFSET_Y,
 };
 
+include!("octaveback.xbm.rs");
+const OCTAVEBACK: Bitmap<'static> = Bitmap {
+    bits: OCTAVEBACK_BITS,
+    width: OCTAVEBACK_WIDTH,
+    height: OCTAVEBACK_HEIGHT,
+    x_offset: 0,
+    y_offset: 0,
+};
+
+include!("octavetail.xbm.rs");
+const OCTAVETAIL: Bitmap<'static> = Bitmap {
+    bits: OCTAVETAIL_BITS,
+    width: OCTAVETAIL_WIDTH,
+    height: OCTAVETAIL_HEIGHT,
+    x_offset: 34,
+    y_offset: 238,
+};
+
 const NUM_TAILS: usize = 10;
 
 const N_TAIL_PTS: usize = 7;
 
-fn create_eye_pixmap(t: f64) -> Image {
+fn create_eye_pixmap(t: f64, dog: bool) -> Image {
     macro_rules! tr {
         ($cond:expr ,? $then:expr ,: $else:expr) => {
             if $cond {
@@ -172,8 +190,8 @@ fn create_eye_pixmap(t: f64) -> Image {
         bytes: vec![WHITE; 30 * 60],
         width: 60,
         height: 30,
-        x_offset: 47,
-        y_offset: 30,
+        x_offset: 47 + if dog { 5 } else { 0 },
+        y_offset: 30 + if dog { 10 } else { 0 },
     };
 
     //ret.draw_outline();
@@ -245,6 +263,51 @@ fn create_eye_pixmap(t: f64) -> Image {
     ret.flood_fill(cx / n, cy / n);
 
     ret
+}
+
+fn dog_tail(t: f64) -> Image {
+    /*  Pendulum parameters */
+    let s: f64;
+    let c: f64;
+    const A: f64 = 0.4;
+    let omega: f64 = 1.0;
+    let phi: f64 = 3.0 * FRAC_PI_2;
+    let angle: f64;
+
+    //    static XPoint tailOffset = { 74, -15 };
+    const TAIL_WIDTH: usize = OCTAVETAIL_WIDTH;
+    const TAIL_HEIGHT: usize = OCTAVETAIL_HEIGHT;
+
+    /*
+     *  Compute pendulum function.
+     */
+    angle = A * f64::sin(omega * t + phi);
+    s = f64::sin(angle);
+    c = f64::cos(angle);
+
+    let mut buf = Image::new(
+        TAIL_WIDTH,
+        TAIL_HEIGHT,
+        OCTAVETAIL.x_offset,
+        OCTAVETAIL.y_offset,
+    );
+    /*
+     *  Rotate the center tail about its origin by "angle" degrees.
+     */
+    let t = bits_to_bytes(OCTAVETAIL_BITS, OCTAVETAIL_WIDTH);
+    let center_point = ((OCTAVETAIL_WIDTH / 2) as i64, 0);
+    for y in 0..OCTAVETAIL_HEIGHT {
+        for x in 0..OCTAVETAIL_WIDTH {
+            if t[y * OCTAVETAIL_WIDTH + x] == BLACK {
+                let x = (x as i64 - center_point.0) as f64;
+                let y = (y as i64 - center_point.1) as f64;
+                let xr = x * c - y * s;
+                let yr = x * s + y * c;
+                buf.plot(xr as i64 + center_point.0, yr as i64 + center_point.1);
+            }
+        }
+    }
+    buf
 }
 
 fn create_tail_image(t: f64) -> Image {
@@ -431,6 +494,7 @@ argument is provided.
       --sunmoon              show sun or moon phase depending on the hour
       --moon                 show only moon phase
       --date                 show month date
+      --dog                  show an italian greyhound named Gaius Octavius Maximus instead of a cat
 
       OFFSET format is [+-]{0,1}\d\d:\d\d, e.g: 02:00 or -03:45 or +00:00
 "#;
@@ -462,6 +526,7 @@ fn main() {
         return;
     }
     let show_date = !args.is_empty() && args.iter().any(|s| s == "--date");
+    let dog = !args.is_empty() && args.iter().any(|s| s == "--dog");
 
     let mut tail_kind: fn(_) -> _ = create_tail_image;
     let crazy: usize = args.iter().filter(|s| *s == "--crazy").count();
@@ -514,8 +579,12 @@ fn main() {
     let mut eyes_frames: Vec<Image> = Vec::with_capacity(NUM_TAILS);
 
     for i in 0..NUM_TAILS {
-        tails_frames.push(tail_kind(i as f64 * PI / (NUM_TAILS as f64)));
-        eyes_frames.push(create_eye_pixmap(i as f64 * PI / (NUM_TAILS as f64)));
+        if dog {
+            tails_frames.push(dog_tail(i as f64 * PI / (NUM_TAILS as f64)));
+        } else {
+            tails_frames.push(tail_kind(i as f64 * PI / (NUM_TAILS as f64)));
+        }
+        eyes_frames.push(create_eye_pixmap(i as f64 * PI / (NUM_TAILS as f64), dog));
     }
 
     let mut window = Window::new(
@@ -539,12 +608,22 @@ fn main() {
 
     let catwhite = Image::from(CATWHITE);
     catwhite.draw(&mut buffer, WHITE, Some(WHITE));
-    let catback = Image::from(CATBACK);
+    let catback = if dog {
+        Image::from(OCTAVEBACK)
+    } else {
+        Image::from(CATBACK)
+    };
     catback.draw(&mut buffer, BLACK, None);
-    let cattie = Image::from(CATTIE);
-    cattie.draw(&mut buffer, AZURE_BLUE, None);
-    let tail = Image::from(TAIL);
-    tail.draw(&mut buffer, BLACK, None);
+    if !dog {
+        let cattie = Image::from(CATTIE);
+        cattie.draw(&mut buffer, AZURE_BLUE, None);
+    }
+    let tail = if dog {
+        Image::from(OCTAVETAIL)
+    } else {
+        Image::from(TAIL)
+    };
+    tail.draw(&mut buffer, WHITE, Some(WHITE));
     let eyes = Image::from(EYES);
     eyes.draw(&mut buffer, BLACK, None);
 
@@ -645,7 +724,7 @@ fn main() {
 
     while window.is_open() && !window.is_key_down(Key::Escape) && !window.is_key_down(Key::Q) {
         let cur_tail = &tails_frames[i];
-        tail.draw(&mut buffer, BLACK, Some(WHITE));
+        tail.draw(&mut buffer, WHITE, Some(WHITE));
         cur_tail.draw(&mut buffer, BLACK, None);
         let cur_eyes = &eyes_frames[i];
         eyes_frames[prev_i].draw(&mut buffer, WHITE, None);
