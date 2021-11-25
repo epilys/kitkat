@@ -48,6 +48,44 @@ argument is provided.
 
 </td>
 </tr>
+<tr>
+<th>
+Default drop shaped tail.
+</th>
+<th>
+Hooked tail with `--hook`.
+</th>
+<th>
+Resizable window with `--resize`.
+</th>
+<th>
+Dog instead of cat with `--dog`.
+</th>
+</tr>
+<tr>
+<td>
+
+![demo](./kitkat-date-and-sun.jpg?raw=true)
+
+</td>
+<td>
+
+![demo](./kitkat-moon-phase-only.jpg?raw=true)
+
+</td>
+<td>
+</td>
+<td>
+</td>
+</tr>
+<tr>
+<th>
+Showing current date and sun/moon phase status.
+</th>
+<th>
+Showing just moon phase status.
+</th>
+</tr>
 </table>
 
 ## References
