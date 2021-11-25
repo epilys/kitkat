@@ -80,6 +80,17 @@ impl Image {
         }
     }
 
+    pub fn copy(&mut self, other: &Image, x_offset: usize, y_offset: usize) {
+        for y in y_offset..self.height {
+            for x in x_offset..self.width {
+                if let Some(p) = other.get((x - x_offset) as i64, (y - y_offset) as i64) {
+                    if p == BLACK {
+                        self.plot(x as i64, y as i64);
+                    }
+                }
+            }
+        }
+    }
     pub fn plot(&mut self, x: i64, y: i64) {
         //std::dbg!((x, y));
         //std::dbg!(self.bytes.len());
@@ -87,21 +98,25 @@ impl Image {
         //std::dbg!(self.height);
         //std::dbg!(self.width * self.height);
         if x < 0 || y < 0 || y >= (self.height as i64) || x >= (self.width as i64) {
-            eprintln!("invalid plot() coors: ({}, {})", x, y);
+            if cfg!(debug_assertions) {
+                eprintln!("invalid plot() coors: ({}, {})", x, y);
+            }
             return;
         }
         let (x, y): (usize, usize) = (x as _, y as _);
         self.bytes[y * self.width + x] = BLACK;
     }
 
-    pub fn get(&mut self, x: i64, y: i64) -> Option<u32> {
+    pub fn get(&self, x: i64, y: i64) -> Option<u32> {
         //std::dbg!((x, y));
         //std::dbg!(self.bytes.len());
         //std::dbg!(self.width);
         //std::dbg!(self.height);
         //std::dbg!(self.width * self.height);
         if x < 0 || y < 0 || y >= (self.height as i64) || x >= (self.width as i64) {
-            eprintln!("invalid plot() coors: ({}, {})", x, y);
+            if cfg!(debug_assertions) {
+                eprintln!("invalid plot() coors: ({}, {})", x, y);
+            }
             return None;
         }
         let (x, y): (usize, usize) = (x as _, y as _);

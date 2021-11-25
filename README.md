@@ -4,7 +4,7 @@ This is the plan9 cat clock utility rewritten in rust with [minifb](https://crat
 
 ```shell
 $ kitkat --help
-Usage: kitkat [--hook|--crazy|--offset OFFSET|--borderless|--resize]
+Usage: kitkat [--hook|--crazy|--offset OFFSET|--borderless|--resize|--sunmoon|--moon|--date]
 
 Displays a kit kat clock with the system time, or the system time with given offset if the --offset
 argument is provided.
@@ -15,6 +15,9 @@ argument is provided.
                              offset will be used)
       --borderless
       --resize
+      --sunmoon              show sun or moon phase depending on the hour
+      --moon                 show only moon phase
+      --date                 show month date
 
       OFFSET format is [+-]{0,1}\d\d:\d\d, e.g: 02:00 or -03:45 or +00:00
 ```

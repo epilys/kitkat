@@ -28,6 +28,7 @@ mod image;
 pub use image::*;
 mod draw;
 pub use draw::*;
+mod date;
 mod hands;
 mod moonphase;
 
@@ -416,7 +417,7 @@ fn create_tail_image_hook(t: f64) -> Image {
     Image::from(Bitmap { bits: &ret, ..TAIL })
 }
 
-const HELP: &str = r#"Usage: kitkat [--hook|--crazy|--offset OFFSET|--borderless|--resize|--sunmoon|--moon]
+const HELP: &str = r#"Usage: kitkat [--hook|--crazy|--offset OFFSET|--borderless|--resize|--sunmoon|--moon|--date]
 
 Displays a kit kat clock with the system time, or the system time with given offset if the --offset
 argument is provided.
@@ -429,6 +430,7 @@ argument is provided.
       --resize
       --sunmoon              show sun or moon phase depending on the hour
       --moon                 show only moon phase
+      --date                 show month date
 
       OFFSET format is [+-]{0,1}\d\d:\d\d, e.g: 02:00 or -03:45 or +00:00
 "#;
@@ -459,6 +461,7 @@ fn main() {
         eprintln!("ERROR: You can't use both --sunmoon and --moon.");
         return;
     }
+    let show_date = !args.is_empty() && args.iter().any(|s| s == "--date");
 
     let mut tail_kind: fn(_) -> _ = create_tail_image;
     let crazy: usize = args.iter().filter(|s| *s == "--crazy").count();
@@ -638,6 +641,8 @@ fn main() {
     let full_moon: Image = moonphase::MoonPosition::FullMoon.into();
     let moon_phase: Image = moonphase::phase(moonphase::position(None)).into();
 
+    let date: Image = date::make_date(tm.tm_mday as i64);
+
     while window.is_open() && !window.is_key_down(Key::Escape) && !window.is_key_down(Key::Q) {
         let cur_tail = &tails_frames[i];
         tail.draw(&mut buffer, BLACK, Some(WHITE));
@@ -697,6 +702,9 @@ fn main() {
         //blank_face.draw(&mut buffer, WHITE, Some(WHITE));
         hour_hand.draw(&mut buffer, WHITE, None);
         hour_hand.clear();
+        if show_date {
+            date.draw(&mut buffer, BLACK, None);
+        }
         hands::draw_second(
             &mut hour_hand,
             HOUR_HAND_WIDTH,
