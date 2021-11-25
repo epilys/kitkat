@@ -42,6 +42,11 @@ argument is provided.
 ![demo](./kitkat-resized.jpg?raw=true)
 
 </td>
+<td>
+
+![demo](./dogkat.gif?raw=true)
+
+</td>
 </tr>
 </table>
 
