@@ -297,9 +297,10 @@ fn dog_tail(t: f64) -> Image {
             if t[y * OCTAVETAIL_WIDTH + x] == BLACK {
                 let x = (x as i64 - center_point.0) as f64;
                 let y = (y as i64 - center_point.1) as f64;
-                let xr = x * c - y * s;
-                let yr = x * s + y * c;
-                buf.plot(xr as i64 + center_point.0, yr as i64 + center_point.1);
+                let xr = (x * c - y * s) as i64 + center_point.0;
+                let yr = (x * s + y * c) as i64 + center_point.1;
+                buf.plot(xr, yr);
+                buf.plot(xr + 1, yr);
             }
         }
     }
