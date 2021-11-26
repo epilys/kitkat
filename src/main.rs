@@ -689,7 +689,7 @@ fn main() {
         HOUR_HAND_WIDTH,
         HOUR_HAND_HEIGHT,
         -5,
-        (hour as f64) / 12.0,
+        0.5 * (((hour as usize % 12) * 60 + (minutes as usize)) as f64) / 360.,
     );
     hour_hand.draw(&mut buffer, BLACK, None);
     hands::draw_second(
@@ -705,7 +705,7 @@ fn main() {
         MINUTE_HAND_WIDTH,
         MINUTE_HAND_HEIGHT,
         -5,
-        (minutes as f64) / 60.0,
+        (6. * (minutes as f64)) / 360.,
     );
     minute_hand.draw(&mut buffer, BLACK, None);
 
@@ -777,7 +777,7 @@ fn main() {
                 MINUTE_HAND_WIDTH,
                 MINUTE_HAND_HEIGHT,
                 -5,
-                (minutes as f64) / 60.0,
+                (6. * (minutes as f64)) / 360.,
             );
         }
         minute_hand.draw(&mut buffer, BLACK, None);
@@ -792,7 +792,7 @@ fn main() {
             HOUR_HAND_WIDTH,
             HOUR_HAND_HEIGHT,
             -5,
-            (hour as f64) / 12.0,
+            0.5 * (((hour as usize % 12) * 60 + (minutes as usize)) as f64) / 360.,
         );
         hour_hand.draw(&mut buffer, BLACK, None);
 
@@ -810,7 +810,8 @@ fn main() {
         }
 
         if crazy > 0 {
-            for _ in i..(crazy + i) {
+            let r = i;
+            for _ in r..(crazy + r) {
                 if up {
                     if i + 1 == tails_frames.len() {
                         up = false;
