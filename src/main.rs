@@ -283,7 +283,7 @@ fn dog_tail(t: f64) -> Image {
 
     let mut buf = Image::new(
         OCTAVETAIL_WIDTH,
-        OCTAVETAIL_HEIGHT,
+        OCTAVETAIL_HEIGHT + 4,
         OCTAVETAIL.x_offset,
         OCTAVETAIL.y_offset,
     );
