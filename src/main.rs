@@ -501,7 +501,7 @@ fn main() {
     unsafe {
         libc::localtime_r(&time as *const _, tm.as_mut_ptr());
     }
-    let tm = unsafe { tm.assume_init() };
+    let mut tm = unsafe { tm.assume_init() };
     let args = std::env::args().skip(1).collect::<Vec<String>>();
     if !args.is_empty() && args.iter().any(|s| s == "--help") {
         if args.iter().any(|s| s != "--help") {
@@ -716,7 +716,7 @@ fn main() {
     let full_moon: Image = moonphase::MoonPosition::FullMoon.into();
     let moon_phase: Image = moonphase::phase(moonphase::position(None)).into();
 
-    let date: Image = date::make_date(tm.tm_mday as i64);
+    let mut date: Image = date::make_date(tm.tm_mday as i64);
 
     while window.is_open() && !window.is_key_down(Key::Escape) && !window.is_key_down(Key::Q) {
         let cur_tail = &tails_frames[i];
@@ -761,6 +761,13 @@ fn main() {
                 hour += 1;
                 if hour == 24 {
                     hour = 0;
+                }
+                if show_date && hour <= 2 {
+                    unsafe {
+                        let time = libc::time(std::ptr::null_mut());
+                        libc::localtime_r(&time as *const _, &mut tm as *mut _);
+                    }
+                    date = date::make_date(tm.tm_mday as i64);
                 }
             }
             minute_hand.draw(&mut buffer, WHITE, None);
