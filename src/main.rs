@@ -500,6 +500,9 @@ fn main() {
     let time = unsafe { libc::time(std::ptr::null_mut()) };
     let mut tm = std::mem::MaybeUninit::<libc::tm>::uninit();
     unsafe {
+        #[cfg(target_os = "windows")]
+        libc::localtime_s(tm.as_mut_ptr(), &time as *const _);
+        #[cfg(not(target_os = "windows"))]
         libc::localtime_r(&time as *const _, tm.as_mut_ptr());
     }
     let mut tm = unsafe { tm.assume_init() };
@@ -766,6 +769,9 @@ fn main() {
                 if show_date && hour <= 2 {
                     unsafe {
                         let time = libc::time(std::ptr::null_mut());
+                        #[cfg(target_os = "windows")]
+                        libc::localtime_s(&mut tm as *mut _, &time as *const _);
+                        #[cfg(not(target_os = "windows"))]
                         libc::localtime_r(&time as *const _, &mut tm as *mut _);
                     }
                     date = date::make_date(tm.tm_mday as i64);

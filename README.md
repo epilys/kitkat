@@ -2,6 +2,8 @@
 
 This is the plan9 cat clock utility rewritten in rust with [minifb](https://crates.io/crates/minifb) crate.
 
+Confirmed working in Linux and Windows.
+
 ```shell
 $ kitkat --help
 Usage: kitkat [--hook|--crazy|--offset OFFSET|--borderless|--resize|--sunmoon|--moon|--date]
