@@ -75,6 +75,19 @@ pub fn make_date(mday: i64) -> Image {
                     first_digit.height = _2_HEIGHT;
                     Some(first_digit)
                 }
+                "3" => {
+                    let mut first_digit = Image {
+                        bytes: vec![],
+                        width: 0,
+                        height: 0,
+                        y_offset: 0,
+                        x_offset: 1,
+                    };
+                    first_digit.bytes = bits_to_bytes(_3_BITS, _3_WIDTH);
+                    first_digit.width = _3_WIDTH;
+                    first_digit.height = _3_HEIGHT;
+                    Some(first_digit)
+                }
                 _ => unreachable!(),
             }
         };
