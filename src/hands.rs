@@ -44,21 +44,23 @@ pub const FACE_OFFSET_Y: usize = CAT_HEIGHT / 2 - FACE_HEIGHT / 2;
  *  how far around the circle (clockwise) from high noon.
  *
  */
-/*
-pub fn draw_hand(_buffer: &mut Buffer, _length: i64, width: i64, fraction_of_a_circle: f64) {
+pub fn draw_hand(
+    buffer: &mut Image,
+    length: i64,
+    width: i64,
+    _offset: i64,
+    fraction_of_a_circle: f64,
+) -> (i64, i64) {
+    let width = width as f64;
+    let length = length as f64;
+    //let offset = offset as f64;
+
     let angle: f64;
     let cos_angle: f64;
     let sin_angle: f64;
 
     let ws: f64;
     let wc: f64;
-
-    let mut _x: i64;
-    let mut _y: i64;
-    let mut _x1: i64;
-    let mut _y1: i64;
-    let mut _x2: i64;
-    let mut _y2: i64;
 
     /*
      *  A full circle is 2 PI radians.
@@ -84,20 +86,29 @@ pub fn draw_hand(_buffer: &mut Buffer, _length: i64, width: i64, fraction_of_a_c
      */
     wc = (width as f64) * cos_angle;
     ws = (width as f64) * sin_angle;
-    /*
-    SetSeg(x = centerX + Round(length * sinAngle),
-           y = centerY - Round(length * cosAngle),
-           x1 = centerX - Round(ws + wc),
-           y1 = centerY + Round(wc - ws));  /* 1 ---- 2 */
-    /* 2 */
-    SetSeg(x1, y1,
-           x2 = centerX - Round(ws - wc),
-           y2 = centerY + Round(wc + ws));  /* 2 ----- 3 */
+    let center_point = ((FACE_WIDTH / 2) as i64, (FACE_HEIGHT / 2) as i64); //(5,50);
 
-    SetSeg(x2, y2, x, y);    /* 3 ----- 1(4) */
-    */
+    let a = (
+        center_point.0 + (length * sin_angle) as i64,
+        center_point.1 - (length * cos_angle) as i64,
+    );
+    let b = (
+        center_point.0 - (ws + wc) as i64,
+        center_point.1 + (wc - ws) as i64,
+    );
+    let c = (
+        center_point.0 - (ws - wc) as i64,
+        center_point.1 + (wc + ws) as i64,
+    );
+    buffer.plot_line_width(a, b, 0.0); /* 1 ---- 2 */
+    buffer.plot_line_width(b, c, 0.0); /* 2 ----- 3 */
+    buffer.plot_line_width(c, a, 0.0); /* 3 ----- 1(4) */
+
+    (
+        (a.0 + b.0 + c.0) / 3 + center_point.0,
+        (a.1 + b.1 + c.1) / 3 + center_point.1,
+    )
 }
-*/
 
 /*
  *  DrawSecond - Draws the second hand (diamond).
@@ -129,8 +140,6 @@ pub fn draw_second(
     let wc: f64;
 
     let mid: f64;
-    let mut _x: i64;
-    let mut _y: i64;
 
     /*
      *  A full circle is 2 PI radians.

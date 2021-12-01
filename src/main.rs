@@ -662,14 +662,14 @@ fn main() {
         y_offset: hands::FACE_OFFSET_Y,
     };
 
-    const SECOND_HAND_WIDTH: i64 = 23;
-    const SECOND_HAND_HEIGHT: i64 = 1;
+    const SECOND_HAND_WIDTH: i64 = 19;
+    const SECOND_HAND_HEIGHT: i64 = 0;
 
-    const MINUTE_HAND_WIDTH: i64 = 22;
+    const MINUTE_HAND_WIDTH: i64 = 20;
     const MINUTE_HAND_HEIGHT: i64 = 3;
 
     const HOUR_HAND_WIDTH: i64 = 16;
-    const HOUR_HAND_HEIGHT: i64 = 2;
+    const HOUR_HAND_HEIGHT: i64 = 3;
 
     let mut i: usize = 0;
     let mut prev_i = i;
@@ -689,14 +689,6 @@ fn main() {
     );
     let mut passed_seconds = tm.tm_sec as _;
     hands::draw_second(
-        &mut hour_hand,
-        HOUR_HAND_WIDTH,
-        HOUR_HAND_HEIGHT,
-        -5,
-        0.5 * (((hour as usize % 12) * 60 + (minutes as usize)) as f64) / 360.,
-    );
-    hour_hand.draw(&mut buffer, BLACK, None);
-    hands::draw_second(
         &mut second_hand,
         SECOND_HAND_WIDTH,
         SECOND_HAND_HEIGHT,
@@ -704,7 +696,15 @@ fn main() {
         (passed_seconds as f64) / 60.0,
     );
     second_hand.draw(&mut buffer, BLACK, None);
-    hands::draw_second(
+    hands::draw_hand(
+        &mut hour_hand,
+        HOUR_HAND_WIDTH,
+        HOUR_HAND_HEIGHT,
+        -5,
+        0.5 * (((hour as usize % 12) * 60 + (minutes as usize)) as f64) / 360.,
+    );
+    hour_hand.draw(&mut buffer, BLACK, None);
+    hands::draw_hand(
         &mut minute_hand,
         MINUTE_HAND_WIDTH,
         MINUTE_HAND_HEIGHT,
@@ -779,7 +779,7 @@ fn main() {
             }
             minute_hand.draw(&mut buffer, WHITE, None);
             minute_hand.clear();
-            hands::draw_second(
+            hands::draw_hand(
                 &mut minute_hand,
                 MINUTE_HAND_WIDTH,
                 MINUTE_HAND_HEIGHT,
@@ -791,10 +791,11 @@ fn main() {
         //blank_face.draw(&mut buffer, WHITE, Some(WHITE));
         hour_hand.draw(&mut buffer, WHITE, None);
         hour_hand.clear();
+        hour_hand.draw(&mut buffer, BLACK, None);
         if show_date {
             date.draw(&mut buffer, BLACK, None);
         }
-        hands::draw_second(
+        hands::draw_hand(
             &mut hour_hand,
             HOUR_HAND_WIDTH,
             HOUR_HAND_HEIGHT,
