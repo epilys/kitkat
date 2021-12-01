@@ -38,7 +38,7 @@ pub fn make_date(mday: i64) -> Image {
     let mut ret = Image::new(
         DATE_WIDTH + 2,
         DATE_WIDTH + 2,
-        CAT_WIDTH / 2 - DATE_WIDTH / 2 + 1,
+        CAT_WIDTH / 2 - 3 * DATE_WIDTH / 4,
         TAIL.y_offset - 4 * DATE_WIDTH,
     );
 
@@ -170,7 +170,7 @@ pub fn make_date(mday: i64) -> Image {
             ret.copy(&first_digit, 1, 2);
             ret.copy(&second_digit, DATE_WIDTH / 2 + 1, 2);
         } else {
-            ret.copy(&second_digit, DATE_WIDTH / 2 + 1, 2);
+            ret.copy(&second_digit, DATE_WIDTH / 2, 2);
         }
     }
 
